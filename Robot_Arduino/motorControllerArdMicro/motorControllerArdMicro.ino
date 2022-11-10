@@ -45,6 +45,8 @@ double rot_stepDeg = 14.005; //steps per degree
 #define MOTOR_4_STEP 13
 //END
 
+#define clockwise  true
+#define counterCW  false
 //******* GLOBAL VARIABLES **********
 int motorStepsArr[4] = {0,0,0,0}; //number of steps left for each motor.
 
@@ -53,9 +55,6 @@ void setup() {
   setMotorTorqueAll(1);
   Timer1.initialize(10000); //every 10ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
-
-  setMotorDir(1, true);
-  setMotorDir(3, false);
   delay(3000);
 
 }
@@ -63,7 +62,7 @@ void setup() {
 void loop() {
   moveRobot(500, 1, 500);
   delay(2000);
-  rotateRobot(180, false, 500);
+  rotateRobot(180, counterCW, 500);
   delay(2000);
   
 }
@@ -198,15 +197,15 @@ void moveRobot(double distanceMM, int dirColor, int spd){
   int steps = int(movLin_stepMM * distanceMM);
   
   if(dirColor == 1 || dirColor == 2){ //Red or Black
-    setMotorDir(1, true); //for black dir
-    setMotorDir(2, false); //for red dir
-    setMotorDir(3, false); //for black dor
-    setMotorDir(4, true); //for red dir
+    setMotorDir(1, clockwise); //for black dir
+    setMotorDir(2, counterCW); //for red dir
+    setMotorDir(3, counterCW); //for black dor
+    setMotorDir(4, clockwise); //for red dir
     }else{
-    setMotorDir(1, false);
-    setMotorDir(2, true);
-    setMotorDir(3, true);
-    setMotorDir(4, false);
+    setMotorDir(1, counterCW);
+    setMotorDir(2, clockwise);
+    setMotorDir(3, clockwise);
+    setMotorDir(4, counterCW);
       }
 
     if(dirColor == 1 || dirColor == 3){
