@@ -55,14 +55,21 @@ void setup() {
   setMotorTorqueAll(1);
   Timer1.initialize(10000); //every 10ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
+  Serial.begin(9600);
   delay(3000);
 
 }
 
 void loop() {
-  moveRobot(500, 1, 500);
-  delay(2000);
-  rotateRobot(180, counterCW, 500);
+  int angle = waitForSerialAngle_Blocking();
+  double a_toPass = abs(angle);
+  if(angle != -1){
+    if(angle>0){
+    rotateRobot(a_toPass, clockwise, 500);
+    }else{
+      rotateRobot(a_toPass, counterCW, 500);
+      }
+    }
   delay(2000);
   
 }
@@ -220,3 +227,39 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         }
       }
 }
+
+
+
+//******TESTING AND IN DEVELOPMENT
+
+int waitForSerialAngle_Blocking(){
+    if (Serial.available()) {
+    char c = Serial.read();
+    char d = 0;
+     char e = 0;
+    if(c == 'd'){ //continue
+      if(Serial.available() > 0){
+    d = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      d = Serial.read();
+      }
+      if(Serial.available() > 0){
+    e = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      e = Serial.read();
+      }
+
+     int r = (d << 8) | (e);
+     Serial.write(d);
+     Serial.write(e);
+     return r;
+      }else{ 
+    while (Serial.available() > 0) { //empty buffer
+     Serial.read();  
+    } 
+  }
+  }
+  return -1;
+  }

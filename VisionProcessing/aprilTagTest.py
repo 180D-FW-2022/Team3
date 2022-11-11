@@ -5,6 +5,28 @@ import cv2 as cv
 import time
 import math 
 
+import warnings
+import serial
+import serial.tools.list_ports
+import time
+
+arduino_ports = [
+    p.device
+    for p in serial.tools.list_ports.comports()
+    if ('Arduino' in p.description or 'USB Serial' in p.description)  # may need tweaking to match new arduinos
+]
+if not arduino_ports:
+    raise IOError("No Arduino found")
+if len(arduino_ports) > 1:
+    warnings.warn('Multiple Arduinos found - using the first')
+
+
+ser = serial.Serial(arduino_ports[0], timeout = 0.5)
+time.sleep(4)
+print(ser.name)         # check which port was really used
+
+
+
 cap = cv.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
@@ -25,7 +47,7 @@ P = [[1, 0, 0],[0, -1, 0],[0, 0, -1]]
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
-    frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
+   #frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     result = at_detector.detect(gray, True, (1570, 1570, 945, 630), 0.175)
     img_size = gray.shape
@@ -39,7 +61,8 @@ while True:
         unofficial_tag_position = P @ Pose_R.T @ (-1 * Pose_T)
         print("relative pos: ")
         print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
-        print("angle: "+str(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi)))
+        angle = int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi))
+        print("angle: "+str(angle))
         cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
         cv.putText(frame, 
                     str(i.tag_id), 
@@ -48,6 +71,19 @@ while True:
                     (0, 0, 0), 
                     10, 
                     cv.LINE_4)
+        
+        angle_send = int(90-abs(angle))
+        if(angle > 0):
+            angle_send = angle_send * -1
+        print("angleSend: "+str(angle_send))
+        bytes_val = angle_send.to_bytes(2, 'big', signed=True)
+        ser.write(str.encode('d'))
+        ser.write(bytes_val)
+        time.sleep(5)
+        if(bytes_val == ser.read(2)):
+            print("received")
+        else:
+            ser.write(b'\xFF')             
    # print(result)
     # if frame is read correctly ret is True
     if not ret:
@@ -59,7 +95,7 @@ while True:
     cv.imshow('frame', frame)
     if cv.waitKey(1) == ord('q'):
         break
-    break
 # When everything done, release the capture
 cap.release()
 cv.destroyAllWindows()
+ser.close()             # close port
