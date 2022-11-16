@@ -122,7 +122,3 @@ class OrTak:
         self.itemCount = len(itemArray)
         self.cost = 9999
         self.__sendOrder()
-        
-test = OrTak(5)
-testItemArray = [("Chicken sandwich", 1), ("Burger", 2)]
-test.testOrder(testItemArray)
