@@ -105,8 +105,8 @@ class OrTak:
                 print("How many?")
                 qty = self.__speechToText()
                 self.itemArray.append((item, int(qty)))
-                self.itemCount = self.itemCount + int(qty)
-                self.cost = self.cost + int(qty) * self.menu[item]
+                self.itemCount += int(qty)
+                self.cost += int(qty) * self.menu[item]
                 pass
             else:  
                 print("Item not found in menu; try again")
@@ -119,6 +119,7 @@ class OrTak:
         
     def testOrder(self, itemArray):
         self.itemArray = itemArray
-        self.itemCount = len(itemArray)
+        for i in itemArray:
+            self.itemCount += i[1]
         self.cost = 9999
         self.__sendOrder()
