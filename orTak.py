@@ -103,7 +103,11 @@ class OrTak:
             
             if item in list(self.menu.keys()):
                 print("How many?")
-                qty = self.__speechToText()
+                while True:
+                    qty = self.__speechToText()
+                    if qty.isnumeric():
+                        break
+                    print("Please repeat yourself!")
                 self.itemArray.append((item, int(qty)))
                 self.itemCount += int(qty)
                 self.cost += int(qty) * self.menu[item]
