@@ -1,54 +1,19 @@
-import numpy as np 
+import numpy as np
 import cv2
-from matplotlib import pyplot as plt
-
-CamL_id = 2
-CamR_id = 1
-
-CamL= cv2.VideoCapture(CamL_id)
-CamR= cv2.VideoCapture(CamR_id)
-
-print("Reading parameters ......")
-cv_file = cv2.FileStorage("data/params_py.xml", cv2.FILE_STORAGE_READ)
-
-Left_Stereo_Map_x = cv_file.getNode("Left_Stereo_Map_x").mat()
-Left_Stereo_Map_y = cv_file.getNode("Left_Stereo_Map_y").mat()
-Right_Stereo_Map_x = cv_file.getNode("Right_Stereo_Map_x").mat()
-Right_Stereo_Map_y = cv_file.getNode("Right_Stereo_Map_y").mat()
-cv_file.release()
-
-
-while True:
-	retR, imgR= CamR.read()
-	retL, imgL= CamL.read()
+import sys 
+# You should replace these 3 lines with the output in calibration step
+DIM=(1920, 1080)
+K=np.array([[1053.9492767154009, 0.0, 951.950093568802], [0.0, 1052.5528725501529, 465.04595064900246], [0.0, 0.0, 1.0]])
+D=np.array([[-0.05334899174471995], [0.004050987506634966], [-0.001763065658573223], [-0.0027162184694266523]])
+def undistort(img_path):
+    img = cv2.imread(img_path)
+    h,w = img.shape[:2]
+    map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
+    undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    cv2.imshow("undistorted", undistorted_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 	
-	if retL and retR:
-		imgR_gray = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
-		imgL_gray = cv2.cvtColor(imgL,cv2.COLOR_BGR2GRAY)
-
-		Left_nice= cv2.remap(imgL,Left_Stereo_Map_x,Left_Stereo_Map_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-		Right_nice= cv2.remap(imgR,Right_Stereo_Map_x,Right_Stereo_Map_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-		output = Right_nice.copy()
-		output[:,:,0] = Right_nice[:,:,0]
-		output[:,:,1] = Right_nice[:,:,1]
-		output[:,:,2] = Left_nice[:,:,2]
-		# scale_percent = 10 # percent of original size
-		# width = int(imgL.shape[1] * scale_percent / 100)
-		# height = int(imgL.shape[0] * scale_percent / 100)
-		# dim = (width, height)	
-  
-		# resize image
-		# resized_L = cv2.resize(imgL, dim, interpolation = cv2.INTER_AREA)
-		# resized_R = cv2.resize(imgR, dim, interpolation = cv2.INTER_AREA)
-
-		stereo = cv2.StereoBM_create(numDisparities=32, blockSize=25)
-		gray1 = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
-		gray2 = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
-		disparity = stereo.compute(gray1,gray2)
-		plt.imshow(disparity,'gray')
-		plt.show()
-
-		#cv2.waitKey(1)
-	
-	else:
-		break
+if __name__ == '__main__':
+    for p in sys.argv[1:]:
+        undistort(p)
