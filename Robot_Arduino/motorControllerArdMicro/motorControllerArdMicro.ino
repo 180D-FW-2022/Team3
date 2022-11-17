@@ -27,6 +27,7 @@ double rot_stepDeg = 14.005; //steps per degree
 //ENABLE : HIGH DISABLE
 //DIR    : LOW CLOCKWISE
 
+#define SPD 250
 
 //MOTOR 1: RED ARM
 #define MOTOR_1_ENABLE 2
@@ -62,19 +63,38 @@ void setup() {
 }
 
 void loop() {
-  int angle = waitForSerialAngle_Blocking();
-  int distance = waitForSerialDist_Blocking();
-  double a_toPass = abs(angle);
-  if(angle != -1){
-    if(angle>0){
-    rotateRobot(a_toPass, clockwise, 300);
-    }else{
-      rotateRobot(a_toPass, counterCW, 300);
-      }
+  String command = checkForSerialAngleDist();
+  if(command != "-1"){
+    if(command[0] == 'd'){
+      command.remove(0,1);
+      int angle = command.toInt();
+      double a_toPass = abs(angle);
+      if(angle != -1){
+        if(angle>0){
+          rotateRobot(a_toPass, clockwise, SPD);
+          sendDone();
+        }else{
+          rotateRobot(a_toPass, counterCW, SPD);
+          sendDone();
+        }
+        }
+      }else if(command[0] == 'r' || command[0] == 'b' || command[0] == 'g' || command[0] == 'w'){
+        int armDir = 1;
+        if(command[0] == 'r'){
+          armDir = 1;
+          }else if(command[0] == 'b'){
+          armDir = 2;
+          }else if(command[0] == 'g'){
+          armDir = 3;
+          }else if(command[0] == 'w'){
+          armDir = 4;
+          }
+        command.remove(0,1);
+        int distance = command.toInt();
+        moveRobot(distance, armDir, SPD);
+        sendDone();
+        }
     }
-    if(distance != -1){
-      moveRobot(distance, 1, 300);
-      }
   //delay(2000);
 
 #ifdef DEBUG_SER
@@ -84,10 +104,10 @@ if(Serial.available()>0){
   int toTurn = incomingString.toInt();
   Serial.println(toTurn);
   if(toTurn > 0){
-  moveRobot(toTurn, 1, 300);
+  moveRobot(toTurn, 1, SPD);
   }else{
     toTurn = -1*toTurn;
-    moveRobot(toTurn, 3, 300);
+    moveRobot(toTurn, 3, SPD);
     }
   }
 
@@ -256,6 +276,60 @@ void moveRobot(double distanceMM, int dirColor, int spd){
 
 
 //******TESTING AND IN DEVELOPMENT
+
+String checkForSerialAngleDist(){
+    if (Serial.available()) {
+    char c = Serial.read();
+    char d = 0;
+     char e = 0;
+    if(c == 'd'){ //degreeMove
+      if(Serial.available() > 0){
+    d = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      d = Serial.read();
+      }
+      if(Serial.available() > 0){
+    e = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      e = Serial.read();
+      }
+
+     int r = (d << 8) | (e);
+     Serial.write(d);
+     Serial.write(e);
+     return ("d"+String(r));
+      }else if(c == 'r' || c == 'b' || c == 'g' || c == 'w' ){ //linearMove
+      if(Serial.available() > 0){
+    d = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      d = Serial.read();
+      }
+      if(Serial.available() > 0){
+    e = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      e = Serial.read();
+      }
+
+     int r = (d << 8) | (e);
+     Serial.write(d);
+     Serial.write(e);
+     return (String(c)+String(r));
+      }
+      }else{ 
+    while (Serial.available() > 0) { //empty buffer
+     Serial.read();  
+    } 
+  }
+  return "-1";
+  }
+
+void sendDone(){
+  Serial.write('a');
+  }
 
 int waitForSerialAngle_Blocking(){
     if (Serial.available()) {

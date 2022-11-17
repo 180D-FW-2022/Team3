@@ -8,7 +8,7 @@ void loop() {
  int angle = waitForSerialAngle_Blocking();
 }
 
-int waitForSerialAngle_Blocking(){
+int waitForSerialAngleDist(){
     if (Serial.available()) {
     char c = Serial.read();
     char d = 0;

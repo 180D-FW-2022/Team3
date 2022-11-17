@@ -43,7 +43,8 @@ at_detector = Detector(
 )
 
 font = cv.FONT_HERSHEY_SIMPLEX
-P = [[1, 0, 0],[0, -1, 0],[0, 0, -1]]
+movementDone = True
+hasRotated = False
 
 start = time.time()
 while True:
@@ -75,8 +76,8 @@ while True:
                         (0, 0, 0), 
                         10, 
                         cv.LINE_4)
-            if(time.time()-start) > 5:
-                start = time.time()
+            if(movementDone == True and hasRotated == False):
+                hasRotated = True
                 angle_send = int(90-abs(angle))
                 if(angle > 0):
                     angle_send = angle_send * -1
@@ -84,34 +85,23 @@ while True:
                 bytes_val = angle_send.to_bytes(2, 'big', signed=True)
                 ser.write(str.encode('d'))
                 ser.write(bytes_val)
-
-           
                 if(bytes_val == ser.read(2)):
                     print("received")
                 else:
                     ser.write(b'\xFF') 
-
-                time.sleep(5)
+            if(movementDone == True and hasRotated == True):
+                hasRotated = False
                 angle_send = int(unofficial_tag_position[2]*1000)
                 print("distanceSend: "+str(angle_send))
                 bytes_val = angle_send.to_bytes(2, 'big', signed=True)
                 ser.write(str.encode('m'))
                 ser.write(bytes_val)
-
-           
                 if(bytes_val == ser.read(2)):
                     print("received")
                 else:
-                    ser.write(b'\xFF')   
-                          
-    # print(result)
-        # if frame is read correctly ret is True
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ... ")
-            break
-        # Our operations on the frame come here
-        #gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        # Display the resulting frame
+                    ser.write(b'\xFF')  
+            if('a' == ser.read(1)):
+                movementDone = True 
         cv.imshow('frame', frame)
         if cv.waitKey(1) == ord('q'):
             break
