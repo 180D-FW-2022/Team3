@@ -2,6 +2,7 @@
 #include <TimerOne.h>
 //END
 
+//#define DEBUG_SER
 //********* PIN DEFINITIONS ************
 
 #define SET 1
@@ -62,15 +63,35 @@ void setup() {
 
 void loop() {
   int angle = waitForSerialAngle_Blocking();
+  int distance = waitForSerialDist_Blocking();
   double a_toPass = abs(angle);
   if(angle != -1){
     if(angle>0){
-    rotateRobot(a_toPass, clockwise, 500);
+    rotateRobot(a_toPass, clockwise, 300);
     }else{
-      rotateRobot(a_toPass, counterCW, 500);
+      rotateRobot(a_toPass, counterCW, 300);
       }
     }
-  delay(2000);
+    if(distance != -1){
+      moveRobot(distance, 1, 300);
+      }
+  //delay(2000);
+
+#ifdef DEBUG_SER
+
+if(Serial.available()>0){
+  String incomingString = Serial.readString();
+  int toTurn = incomingString.toInt();
+  Serial.println(toTurn);
+  if(toTurn > 0){
+  moveRobot(toTurn, 1, 300);
+  }else{
+    toTurn = -1*toTurn;
+    moveRobot(toTurn, 3, 300);
+    }
+  }
+
+#endif
   
 }
 
@@ -137,18 +158,22 @@ void stepMotor(int motorID, int spdDel){
     digitalWrite(MOTOR_1_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_1_STEP, RESET);
+    delayMicroseconds(spdDel);
   }else if(motorID == 2){
     digitalWrite(MOTOR_2_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_2_STEP, RESET);
+    delayMicroseconds(spdDel);
   }else if(motorID == 3){ 
     digitalWrite(MOTOR_3_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_3_STEP, RESET);
+    delayMicroseconds(spdDel);
   }else if(motorID == 4){
     digitalWrite(MOTOR_4_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_4_STEP, RESET);
+    delayMicroseconds(spdDel);
   }
   }
 
@@ -255,7 +280,39 @@ int waitForSerialAngle_Blocking(){
      Serial.write(d);
      Serial.write(e);
      return r;
-      }else{ 
+      }else if(c != 'm'){ 
+    while (Serial.available() > 0) { //empty buffer
+     Serial.read();  
+    } 
+  }
+  }
+  return -1;
+  }
+
+int waitForSerialDist_Blocking(){
+    if (Serial.available()) {
+    char c = Serial.read();
+    char d = 0;
+     char e = 0;
+    if(c == 'm'){ //continue
+      if(Serial.available() > 0){
+    d = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      d = Serial.read();
+      }
+      if(Serial.available() > 0){
+    e = Serial.read();
+      }else{
+        while(!Serial.available()){}
+      e = Serial.read();
+      }
+
+     int r = (d << 8) | (e);
+     Serial.write(d);
+     Serial.write(e);
+     return r;
+      }else if(c != 'd'){ 
     while (Serial.available() > 0) { //empty buffer
      Serial.read();  
     } 
