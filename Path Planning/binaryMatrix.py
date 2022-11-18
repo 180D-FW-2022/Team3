@@ -28,12 +28,12 @@ grid=[
 ]
 alley_v = np.zeros((9*2,1*2))
 alley_h = np.zeros((1*2, 10*2))
-table = np.ones((1*2, 1*2))
+table = 1*np.ones((1*2, 1*2))
 table_alley = np.zeros((1*2, 1*2))
 
 alleyAndTable_f = np.concatenate((table_alley, table, table_alley, table, table_alley, table, table_alley, table, table_alley), axis=0)
     
-alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, alley_v), axis=1)
+alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, alley_v), axis=1)
 
 
 
@@ -55,7 +55,7 @@ x = alleyAndV
 # fig, ax = plt.subplots()
 
 # define the colors
-cmap = mpl.colors.ListedColormap(['w', 'b'])
+cmap = mpl.colors.ListedColormap(['w', 'r', 'g'])
 
 # create a normalize object the describes the limits of
 # each color
