@@ -77,6 +77,7 @@ while True:
                         10, 
                         cv.LINE_4)
             if(movementDone == True and hasRotated == False):
+                movementDone = False
                 hasRotated = True
                 angle_send = int(90-abs(angle))
                 if(angle > 0):
@@ -88,19 +89,28 @@ while True:
                 if(bytes_val == ser.read(2)):
                     print("received")
                 else:
-                    ser.write(b'\xFF') 
+                    ser.write(b'\x00') 
+                    ser.write(b'\x00') 
+                    ser.write(b'\x00') 
+                    movementDone = True 
             if(movementDone == True and hasRotated == True):
+                movementDone = False
                 hasRotated = False
-                angle_send = int(unofficial_tag_position[2]*1000)
-                print("distanceSend: "+str(angle_send))
-                bytes_val = angle_send.to_bytes(2, 'big', signed=True)
-                ser.write(str.encode('m'))
+                distance_send = abs(int(unofficial_tag_position[2]*1000))
+                print("distanceSend: "+str(distance_send))
+                bytes_val = distance_send.to_bytes(2, 'big', signed=True)
+                ser.write(str.encode('r'))
                 ser.write(bytes_val)
                 if(bytes_val == ser.read(2)):
                     print("received")
                 else:
-                    ser.write(b'\xFF')  
-            if('a' == ser.read(1)):
+                    ser.write(b'\x00')  
+                    ser.write(b'\x00') 
+                    ser.write(b'\x00') 
+                    movementDone = True 
+        readS = ser.read(1)
+        if(b'\x61' == readS):
+                print("movDone")
                 movementDone = True 
         cv.imshow('frame', frame)
         if cv.waitKey(1) == ord('q'):

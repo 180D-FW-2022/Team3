@@ -27,7 +27,7 @@ double rot_stepDeg = 14.005; //steps per degree
 //ENABLE : HIGH DISABLE
 //DIR    : LOW CLOCKWISE
 
-#define SPD 250
+#define SPD 400
 
 //MOTOR 1: RED ARM
 #define MOTOR_1_ENABLE 2
@@ -95,6 +95,8 @@ void loop() {
         sendDone();
         }
     }
+    delay(100);
+    command = "";
   //delay(2000);
 
 #ifdef DEBUG_SER
@@ -178,22 +180,22 @@ void stepMotor(int motorID, int spdDel){
     digitalWrite(MOTOR_1_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_1_STEP, RESET);
-    delayMicroseconds(spdDel);
+    //delayMicroseconds(spdDel);
   }else if(motorID == 2){
     digitalWrite(MOTOR_2_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_2_STEP, RESET);
-    delayMicroseconds(spdDel);
+    //delayMicroseconds(spdDel);
   }else if(motorID == 3){ 
     digitalWrite(MOTOR_3_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_3_STEP, RESET);
-    delayMicroseconds(spdDel);
+    //delayMicroseconds(spdDel);
   }else if(motorID == 4){
     digitalWrite(MOTOR_4_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_4_STEP, RESET);
-    delayMicroseconds(spdDel);
+   // delayMicroseconds(spdDel);
   }
   }
 
@@ -295,7 +297,9 @@ String checkForSerialAngleDist(){
         while(!Serial.available()){}
       e = Serial.read();
       }
-
+        while (Serial.available() > 0) { //empty buffer
+     Serial.read();  
+    } 
      int r = (d << 8) | (e);
      Serial.write(d);
      Serial.write(e);
@@ -313,6 +317,9 @@ String checkForSerialAngleDist(){
         while(!Serial.available()){}
       e = Serial.read();
       }
+      while (Serial.available() > 0) { //empty buffer
+     Serial.read();  
+    } 
 
      int r = (d << 8) | (e);
      Serial.write(d);
