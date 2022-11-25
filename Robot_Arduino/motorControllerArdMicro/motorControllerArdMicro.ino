@@ -19,6 +19,8 @@ double movLin_mmStep = 0.3638996139; //mm per step
 double movLin_stepMM = 2.7480106101; //steps per mm
 double rot_stepDeg = 14.005; //steps per degree
 
+
+#define COMM_TIMEOUT 100
 //COLORS
 //ENABLE PIN: RED   /  TURQUISE / GREY
 //DIR PIN   : ORANGE / BLUE
@@ -57,7 +59,7 @@ void setup() {
   setMotorTorqueAll(1);
   Timer1.initialize(10000); //every 10ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(3000);
 
 }
@@ -280,6 +282,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
 //******TESTING AND IN DEVELOPMENT
 
 String checkForSerialAngleDist(){
+  int timeout = 0;
     if (Serial.available()) {
     char c = Serial.read();
     char d = 0;
@@ -288,18 +291,33 @@ String checkForSerialAngleDist(){
       if(Serial.available() > 0){
     d = Serial.read();
       }else{
-        while(!Serial.available()){}
+        timeout = 0;
+        while(!Serial.available() && timeout <= COMM_TIMEOUT){
+          delay(1);
+          timeout++;
+          }
+        if(timeout >= COMM_TIMEOUT){
+          return "-1";
+          }
       d = Serial.read();
       }
       if(Serial.available() > 0){
     e = Serial.read();
       }else{
-        while(!Serial.available()){}
+         timeout = 0;
+        while(!Serial.available() && timeout <= COMM_TIMEOUT){
+          delay(1);
+          timeout++;
+          }
+        if(timeout >= COMM_TIMEOUT){
+          return "-1";
+          }
       e = Serial.read();
       }
         while (Serial.available() > 0) { //empty buffer
-     Serial.read();  
-    } 
+        Serial.read();  
+        delay(1);
+        } 
      int r = (d << 8) | (e);
      Serial.write(d);
      Serial.write(e);
@@ -308,17 +326,32 @@ String checkForSerialAngleDist(){
       if(Serial.available() > 0){
     d = Serial.read();
       }else{
-        while(!Serial.available()){}
+          timeout = 0;
+        while(!Serial.available() && timeout <= COMM_TIMEOUT){
+          delay(1);
+          timeout++;
+          }
+        if(timeout >= COMM_TIMEOUT){
+          return "-1";
+          }
       d = Serial.read();
       }
       if(Serial.available() > 0){
     e = Serial.read();
       }else{
-        while(!Serial.available()){}
+         timeout = 0;
+        while(!Serial.available() && timeout <= COMM_TIMEOUT){
+          delay(1);
+          timeout++;
+          }
+        if(timeout >= COMM_TIMEOUT){
+          return "-1";
+          }
       e = Serial.read();
       }
       while (Serial.available() > 0) { //empty buffer
      Serial.read();  
+     delay(1);
     } 
 
      int r = (d << 8) | (e);
@@ -329,6 +362,7 @@ String checkForSerialAngleDist(){
       }else{ 
     while (Serial.available() > 0) { //empty buffer
      Serial.read();  
+     delay(1);
     } 
   }
   return "-1";

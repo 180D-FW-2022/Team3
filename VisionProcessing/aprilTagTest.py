@@ -21,7 +21,7 @@ if len(arduino_ports) > 1:
     warnings.warn('Multiple Arduinos found - using the first')
 
 
-ser = serial.Serial(arduino_ports[0], timeout = 0.5)
+ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.5)
 time.sleep(4)
 print(ser.name)         # check which port was really used
 
@@ -105,9 +105,8 @@ while True:
                     print("received")
                 else:
                     ser.write(b'\x00')  
-                    ser.write(b'\x00') 
-                    ser.write(b'\x00') 
                     movementDone = True 
+                    time.sleep(0.1)
         readS = ser.read(1)
         if(b'\x61' == readS):
                 print("movDone")
