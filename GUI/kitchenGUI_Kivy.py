@@ -7,7 +7,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.button import MDRaisedButton
 
-tableNumber = 1
+tableNumber = 2
 chickenSandwichQty = 2
 friesQty = 3
 milkshakeQty = 1
@@ -16,6 +16,8 @@ burgerQty = 6
 cheeseburgerQty = 2
 specialRequest = "lactose intolerant"
 totalItems = 15
+servingTable = 1
+tableNoExists = True
 
 class Example(MDApp):
     def generateNewOrder():
@@ -30,12 +32,12 @@ class Example(MDApp):
         specialRequest = "lactose intolerant"
 
     def build(self):
-        self.row_data =  [(str(tableNumber), "Chicken Sandwich", str(chickenSandwichQty)),
-            (str(tableNumber), "Fries", str(friesQty)),
-            (str(tableNumber), "Milkshake", str(milkshakeQty)),
-            (str(tableNumber), "Fruit", str(fruitQty)),
-            (str(tableNumber), "Burger", str(burgerQty)),            
-            (str(tableNumber), "Cheeseburger", str(cheeseburgerQty)),
+        self.row_data =  [("1", "Chicken Sandwich", str(chickenSandwichQty)),
+            ("2", "Fries", str(friesQty)),
+            ("2", "Milkshake", str(milkshakeQty)),
+            ("1", "Fruit", str(fruitQty)),
+            ("2", "Burger", str(burgerQty)),            
+            ("2", "Cheeseburger", str(cheeseburgerQty)),
             ]
 
         layout = MDFloatLayout()  # root layout
@@ -59,7 +61,8 @@ class Example(MDApp):
                 ("Qty", dp(30) ),
             ],
             rows_num = 15,
-            row_data = self.row_data,            
+            row_data = self.row_data,    
+            sorted_on = "Table No."        
         )
         
         
@@ -71,13 +74,42 @@ class Example(MDApp):
         return layout
 
     def on_check_press(self, instance_table, instance_row):        
-        
+        global tableNoExists
+        global servingTable
+        rowCount = 0
+
         index = instance_table.row_data.index(tuple(instance_row))*3
         cols_num = len(instance_table. column_data)
         row_num = int(index/cols_num)
         cell_row =instance_table.table_data.view_adapter.get_visible_view(row_num*cols_num)
         cell_row.change_check_state_no_notify("normal")
         instance_table.remove_row(tuple(instance_row)) 
+        
+        for row in self.data_tables.row_data:
+            rowCount = rowCount+1
+            row_list = list(row)
+            print(row_list[0])
+            if row_list[0] == str(servingTable):
+                tableNoExists = True
+                break
+            else:
+                tableNoExists = False
+        print(tableNoExists)
+
+        if(rowCount == 0):
+            print("send command because empty")
+        
+        if (tableNoExists == False):
+            print("send command")
+            servingTable = servingTable+1
+            print("servingTable = " + str(servingTable))
+        
+
+
+        '''for i, row in enumerate(self.data_tables.row_data):
+                row_list = list(row)
+                row_list[0] = str(i+1)
+                self.data_tables.row_data[i] = tuple(row_list)'''
 
 
     def on_button_press(self, instance_button: MDRaisedButton) -> None:
