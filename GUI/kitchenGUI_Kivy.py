@@ -47,15 +47,11 @@ class Example(MDApp):
             spacing="24dp",
         )
 
-        for button_text in [ "Remove row"]:
-            button_box.add_widget(
-                MDRaisedButton(
-                    text=button_text, on_release=self.on_button_press
-                )
-            )
+        # button_box.add_widget(MDRaisedButton(text="Remove row", on_release=self.on_button_press))
+        # button_box.add_widget(MDRaisedButton(text="Checked rows", on_release=self.on_button_press))
 
         self.data_tables = MDDataTable(
-            # use_pagination=True,
+            use_pagination=False,
             check=True,
             column_data=[
                 ("Table No.", dp(30)),
@@ -66,23 +62,53 @@ class Example(MDApp):
             row_data = self.row_data,            
         )
         
+        
+        self.data_tables.bind(on_check_press=self.on_check_press)
+        
         layout.add_widget(self.data_tables)
         layout.add_widget(button_box)
 
         return layout
 
+    def on_check_press(self, instance_table, instance_row):        
+        
+        index = instance_table.row_data.index(tuple(instance_row))*3
+        cols_num = len(instance_table. column_data)
+        row_num = int(index/cols_num)
+        cell_row =instance_table.table_data.view_adapter.get_visible_view(row_num*cols_num)
+        cell_row.change_check_state_no_notify("normal")
+        instance_table.remove_row(tuple(instance_row)) 
+
+
     def on_button_press(self, instance_button: MDRaisedButton) -> None:
         '''Called when a control button is clicked.'''
-        if(instance_button.text == "Remove row"):
-            for row in self.data_tables.get_row_checks():
-                # index = int(row[0])-1
-                # del self.data_tables.row_data[index]
-                self.data_tables.remove_row(tuple(row))
+        pass
+        # if(instance_button.text == "Remove row"):
+        #     rowsDeleted = self.data_tables.get_row_checks()
+        #     # self.data_tables.table_data.select_all("down")
+        #     self.data_tables.table_data.select_all("normal")
 
-            for i, row in enumerate(self.data_tables.row_data):
-                row_list = list(row)
-                #row_list[0] = str(i+1)
-                self.data_tables.row_data[i] = tuple(row_list)
+        #     for row in rowsDeleted:
+        #         print(row)
+        #         # index = int(row[0])-1
+        #         # del self.data_tables.row_data[index]
+                
+        #         self.data_tables.remove_row(tuple(row))
+
+        #     self.checkedRows = []    
+            # self.data_tables.table_data.select_all("normal")
+
+            # self.data_tables.update_row_data(self.data_tables, self.data_tables.row_data)
+            # for i, row in enumerate(self.data_tables.row_data):
+            #     row_list = list(row)
+            #     #row_list[0] = str(i+1)
+            #     self.data_tables.row_data[i] = tuple(row_list)
+            
+        # if(instance_button.text == "Checked rows"):
+        #     print("check pressed")
+        #     self.data_tables.table_data.select_all("normal")
+        #     print(self.data_tables.get_row_checks())
+
 
     '''def addRow(self, item, status):
         item_num = len(self.data_tables.row_data)+1
