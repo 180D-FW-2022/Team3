@@ -1,5 +1,7 @@
 import speech_recognition as sr
 import paho.mqtt.client as mqtt
+import mqttTopics
+
 
 class OrTak:
     #menu dictionary with items and prices
@@ -16,8 +18,8 @@ class OrTak:
     itemCount = 0
     specialRequests = 'N/A'
     cost = 0
-    MQTTbroker = 'test.mosquitto.org'
-    MQTTtopic = 'ece180d/orderTest'
+    MQTTbroker = mqttTopics.broker
+    MQTTtopic = mqttTopics.orTakTopic
 
     def __init__(self, tableNumberArg):
         self.tableNumber = tableNumberArg
