@@ -6,6 +6,7 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.screen import Screen
 
 tableNumber = 2
 chickenSandwichQty = 2
@@ -19,7 +20,7 @@ totalItems = 15
 servingTable = 1
 tableNoExists = True
 
-class Example(MDApp):
+class Kitchen(MDApp):
     def generateNewOrder():
         tableNumber = random.randint(0, 5)
         chickenSandwichQty = random.randint(0, 5)
@@ -32,6 +33,9 @@ class Example(MDApp):
         specialRequest = "lactose intolerant"
 
     def build(self):
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "Green"
+        screen = Screen()
         self.row_data =  [("1", "Chicken Sandwich", str(chickenSandwichQty)),
             ("2", "Fries", str(friesQty)),
             ("2", "Milkshake", str(milkshakeQty)),
@@ -40,25 +44,27 @@ class Example(MDApp):
             ("2", "Cheeseburger", str(cheeseburgerQty)),
             ]
 
-        layout = MDFloatLayout()  # root layout
+        '''layout = MDFloatLayout()  # root layout
         # Creating control buttons.
         button_box = MDBoxLayout(
             pos_hint={"center_x": 0.5},
             adaptive_size=True,
             padding="24dp",
             spacing="24dp",
-        )
+        )'''
 
         # button_box.add_widget(MDRaisedButton(text="Remove row", on_release=self.on_button_press))
         # button_box.add_widget(MDRaisedButton(text="Checked rows", on_release=self.on_button_press))
 
         self.data_tables = MDDataTable(
+            size_hint = (0.9, 0.9),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
             use_pagination=False,
             check=True,
             column_data=[
-                ("Table No.", dp(30)),
-                ("Item", dp(30)),
-                ("Qty", dp(30) ),
+                ("Table No.", dp(100)),
+                ("Item", dp(100)),
+                ("Qty", dp(100) ),
             ],
             rows_num = 15,
             row_data = self.row_data,    
@@ -68,10 +74,10 @@ class Example(MDApp):
         
         self.data_tables.bind(on_check_press=self.on_check_press)
         
-        layout.add_widget(self.data_tables)
-        layout.add_widget(button_box)
+        screen.add_widget(self.data_tables)
+        #layout.add_widget(button_box)
 
-        return layout
+        return screen
 
     def on_check_press(self, instance_table, instance_row):        
         global tableNoExists
@@ -147,4 +153,4 @@ class Example(MDApp):
         self.data_tables.row_data.append((item_num, item, status))'''
 
 if __name__ == "__main__":
-    Example().run()
+    Kitchen().run()
