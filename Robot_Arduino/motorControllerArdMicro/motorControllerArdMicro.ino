@@ -94,6 +94,7 @@ void loop() {
         command.remove(0,1);
         int distance = command.toInt();
         moveRobot(distance, armDir, SPD);
+        delay(5);
         sendDone();
         }
     }
