@@ -10,6 +10,8 @@ import serial
 import serial.tools.list_ports
 import time
 
+cam_id_L = -1
+
 arduino_ports = [
     p.device
     for p in serial.tools.list_ports.comports()
@@ -26,8 +28,7 @@ time.sleep(4)
 print(ser.name)         # check which port was really used
 
 
-
-cap = cv.VideoCapture(2)
+cap = cv.VideoCapture(cam_id_L, cv.CAP_V4L)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
@@ -58,11 +59,13 @@ while True:
         
         wid = img_size[1]
         hei = img_size[0]
+        if len(result) > 1:
+            result = result
         for i in result:
             cent = i.center
             Pose_R = i.pose_R
             Pose_T = i.pose_t
-            print(i)
+           # print(i)
             unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
             print("relative pos: ")
             print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
@@ -114,8 +117,8 @@ while True:
         cv.imshow('frame', frame)
         if cv.waitKey(1) == ord('q'):
             break
-    except:
-        print("An exception occurred")
+    except i:
+        print(i)
 # When everything done, release the capture
 cap.release()
 cv.destroyAllWindows()
