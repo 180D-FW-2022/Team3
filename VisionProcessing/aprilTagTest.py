@@ -99,7 +99,7 @@ while True:
                 distance_send = abs(int(unofficial_tag_position[2]*1000))
                 print("distanceSend: "+str(distance_send))
                 bytes_val = distance_send.to_bytes(2, 'big', signed=True)
-                ser.write(str.encode('r'))
+                ser.write(str.encode('b'))
                 ser.write(bytes_val)
                 if(bytes_val == ser.read(2)):
                     print("received")
