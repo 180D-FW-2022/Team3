@@ -47,6 +47,13 @@ font = cv.FONT_HERSHEY_SIMPLEX
 movementDone = True
 hasRotated = False
 
+
+def rescale_frame(frame, percent=75):
+    width = int(frame.shape[1] * percent/ 100)
+    height = int(frame.shape[0] * percent/ 100)
+    dim = (width, height)
+    return cv.resize(frame, dim, interpolation =cv.INTER_AREA)
+
 start = time.time()
 while True:
     # Capture frame-by-frame
@@ -54,9 +61,10 @@ while True:
         ret, frame = cap.read()
     #frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        gray = rescale_frame(gray, 25)
         result = at_detector.detect(gray, True, (978, 978, 930, 524), 0.175)
         img_size = gray.shape
-        
+        #print("run")
         wid = img_size[1]
         hei = img_size[0]
         if len(result) > 1:
@@ -81,7 +89,7 @@ while True:
                         cv.LINE_4)
             if(movementDone == True and hasRotated == False):
                 movementDone = False
-                hasRotated = True
+               # hasRotated = True
                 angle_send = int(90-abs(angle))
                 if(angle > 0):
                     angle_send = angle_send * -1
@@ -114,7 +122,7 @@ while True:
         if(b'\x61' == readS):
                 print("movDone")
                 movementDone = True 
-        cv.imshow('frame', frame)
+        #cv.imshow('frame', frame)
         if cv.waitKey(1) == ord('q'):
             break
     except i:
