@@ -74,9 +74,11 @@ void loop() {
       if(angle != -1){
         if(angle>0){
           rotateRobot(a_toPass, clockwise, SPD);
+          delay(50);
           sendDone();
         }else{
           rotateRobot(a_toPass, counterCW, SPD);
+          delay(50);
           sendDone();
         }
         }
@@ -94,7 +96,7 @@ void loop() {
         command.remove(0,1);
         int distance = command.toInt();
         moveRobot(distance, armDir, SPD);
-        delay(5);
+        delay(50);
         sendDone();
         }
     }

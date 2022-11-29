@@ -37,6 +37,8 @@ alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, 
 
 alleyF = np.concatenate((alley_h,alleyAndV,alley_h), axis = 0)
 
+print(alleyF)
+
 
 
 plt.ion()
