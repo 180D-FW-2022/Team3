@@ -10,8 +10,8 @@ import serial
 import serial.tools.list_ports
 import time
 
-cam_id_L = -1
-
+cam_id_L = "/dev/video0"
+scale = 1.0
 arduino_ports = [
     p.device
     for p in serial.tools.list_ports.comports()
@@ -24,18 +24,18 @@ if len(arduino_ports) > 1:
 
 
 ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.5)
-time.sleep(4)
+time.sleep(2)
 print(ser.name)         # check which port was really used
 
 
-cap = cv.VideoCapture(cam_id_L, cv.CAP_V4L)
+cap = cv.VideoCapture(cam_id_L)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
 
 at_detector = Detector(
    families="tag36h11",
-   nthreads=1,
+   nthreads=4,
    quad_decimate=1.0,
    quad_sigma=0.0,
    refine_edges=1,
@@ -61,8 +61,8 @@ while True:
         ret, frame = cap.read()
     #frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        gray = rescale_frame(gray, 25)
-        result = at_detector.detect(gray, True, (978, 978, 930, 524), 0.175)
+        gray = rescale_frame(gray, 100/scale)
+        result = at_detector.detect(gray, True, (978/scale, 978/scale, 930/scale, 524/scale), 0.175)
         img_size = gray.shape
         #print("run")
         wid = img_size[1]
@@ -72,7 +72,7 @@ while True:
         for i in result:
             cent = i.center
             Pose_R = i.pose_R
-            Pose_T = i.pose_t
+            Pose_T = i.pose_tspot
            # print(i)
             unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
             print("relative pos: ")
