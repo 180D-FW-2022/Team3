@@ -144,8 +144,8 @@ while True:
 
             if(movementDone == True):
                 if(stepCounter == 0):
-                  #  movementDone = False     
-                   # send_angle(angleStore)
+                    movementDone = False     
+                    send_angle(angleStore)
                     stepCounter = 1       
                 elif(stepCounter == 1):
                     movementDone = False
