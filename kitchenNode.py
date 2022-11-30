@@ -5,11 +5,8 @@ import mqttTopics
 
 class KitchenNode:
   orderList = deque()
-  MQTTbroker = mqttTopics.broker
-  orTakTopic = mqttTopics.orTakTopic
-  WOKerTopic = mqttTopics.WOKerTopic
   client = mqtt.Client()
-  pending = False
+  orderPending = False
   WOKerReady = False
 
   def __init__(self):
@@ -17,7 +14,8 @@ class KitchenNode:
 
   def __on_connect(self, client, userdata, flags, rc):
       print("Connection initialized. Returned result: " + str(rc))
-      client.subscribe(self.orTakTopic, qos=1) 
+      client.subscribe(mqttTopics.orTakTopic, qos=1) 
+      client.subscribe(mqttTopics.WOKerReadyTopic, qos=1)
       pass
       
     # The callback of the client when it disconnects. 
@@ -57,52 +55,47 @@ class KitchenNode:
 
   def __orderComplete(self, event=None):
     print("orderComplete")
-    self.pending = True
+    self.orderPending = True
       
   def __WOKerReadyState(self, client, userdata, message):
       self.WOKerready = message
 
   def __orderSend(self):
     
-    if self.pending == True and self.WOKerReady == True and len(self.orderList) != 0:
+    if self.orderPending == True and self.WOKerReady == True and len(self.orderList) != 0:
       self.client.publish(mqttTopics.WOKerTableNumberTopic, self.orderList[0]["tableNumber"], qos=1)
-      self.orderList.popleft()
       self.client.publish(mqttTopics.WOKerGoTopic, True, qos=1)
-      self.pending = False
+      self.orderList.popleft()
+      self.orderPending = False
       self.WOKerReady = False
-      print("order sent")
+      print("Order sent")
+    else:
+      print("Queue empty already!")
     pass
 
   def __WOKerTest(self, event=None):
-    print("WOKer Ready")
+    print("WOKer set to ready!")
     self.WOKerReady = True
   
 
   def main(self):
-    # add additional client options (security, certifications, etc.)
+
     self.client.on_connect = self.__on_connect
     self.client.on_disconnect = self.__on_disconnect
     self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
     self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
     
-    # 2. connect to a broker using one of the connect*() functions. 
-    self.client.connect_async(self.MQTTbroker)
+    self.client.connect_async(mqttTopics.broker)
 
-    # 3. call one of the loop*() functions to maintain network traffic flow with the broker. 
     self.client.loop_start()
-    # client.loop_forever()
 
-    keyboard.on_release_key('p', self.__orderComplete)
-    keyboard.on_release_key('t', self.__WOKerTest)
+    keyboard.on_release_key('p', self.__orderComplete) # Mark order as complete
+    keyboard.on_release_key('t', self.__WOKerTest) # set WOKer as ready; only intended for testing
 
     while True:
-      self.__orderSend()
+      self.__orderSend() #constantly check
       pass
-    # use subscribe() to subscribe to a topic and receive messages. 
 
-    # use publish() to publish messages to the broker. 
-
-    # use disconnect() to disconnect from the broker. 
     self.client.loop_stop()
     self.client.disconnect()
 
