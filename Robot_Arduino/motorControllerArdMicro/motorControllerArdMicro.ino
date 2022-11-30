@@ -29,7 +29,10 @@ double rot_stepDeg = 14.005; //steps per degree
 //ENABLE : HIGH DISABLE
 //DIR    : LOW CLOCKWISE
 
-#define SPD 400
+#define SPD_linear 800
+#define SPD_rotate 400
+
+
 
 //MOTOR 1: RED ARM
 #define MOTOR_1_ENABLE 2
@@ -73,12 +76,12 @@ void loop() {
       double a_toPass = abs(angle);
       if(angle != -1){
         if(angle>0){
-          rotateRobot(a_toPass, clockwise, SPD);
-          delay(50);
+          rotateRobot(a_toPass, clockwise, SPD_rotate);
+          delay(200);
           sendDone();
         }else{
-          rotateRobot(a_toPass, counterCW, SPD);
-          delay(50);
+          rotateRobot(a_toPass, counterCW, SPD_rotate);
+          delay(200);
           sendDone();
         }
         }
@@ -95,7 +98,8 @@ void loop() {
           }
         command.remove(0,1);
         int distance = command.toInt();
-        moveRobot(distance, armDir, SPD);
+        double d_toPass = abs(distance);
+        moveRobot(d_toPass, armDir, SPD_linear);
         delay(50);
         sendDone();
         }
@@ -356,8 +360,7 @@ String checkForSerialAngleDist(){
      Serial.read();  
      delay(1);
     } 
-
-     int r = (d << 8) | (e);
+     int r = (d << 8) | e;
      Serial.write(d);
      Serial.write(e);
      return (String(c)+String(r));
@@ -372,6 +375,8 @@ String checkForSerialAngleDist(){
   }
 
 void sendDone(){
+  Serial.write('a');
+  delay(10);
   Serial.write('a');
   }
 

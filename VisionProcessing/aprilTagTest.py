@@ -3,7 +3,8 @@ from pupil_apriltags import Detector
 import numpy as np
 import cv2 as cv
 import time
-import math 
+import math
+import struct
 
 import warnings
 import serial
@@ -11,10 +12,10 @@ import serial.tools.list_ports
 import time
 
 #global consts
-test_tag_id = 1
-distanceScale = 0.8
+test_tag_id = 0
+distanceScale = 0.25
 
-cam_id_L = "/dev/video0"
+cam_id_L = 0 #"/dev/video0"
 scale = 1.0
 
 font = cv.FONT_HERSHEY_SIMPLEX
@@ -31,12 +32,14 @@ def rescale_frame(frame, percent=75):
     return cv.resize(frame, dim, interpolation =cv.INTER_AREA)
 
 def send_distance(distance, direction = 'b'):
-    print("[distance]: move - "+ str(distance))
-    distance_send = distance
-    bytes_val = distance_send.to_bytes(2, 'big', signed=True)
-    ser.write(str.encode(direction))
-    ser.write(bytes_val)
-    if(bytes_val == ser.read(2)):
+    distance_send = int(abs(distance))
+    print("[distance]: move: "+ str(distance_send))
+    #bytes_val = distance_send.to_bytes(2, 'big', signed=True)
+    bytes_data = struct.pack('>h', distance_send)
+    print(bytes_data)
+    ser.write(str.encode('b'))
+    ser.write(bytes_data)
+    if(bytes_data == ser.read(2)):
         print("[distance]: received")
     else:
         ser.write(b'\x00') 
@@ -46,11 +49,14 @@ def send_distance(distance, direction = 'b'):
         time.sleep(0.1)
 
 def send_angle(angle):
-    print("[ angle  ]: move - "+str(angle))
-    bytes_val = angle.to_bytes(2, 'big', signed=True)
+    angle_send = int(angle)
+    print("[ angle  ]: move: "+str(angle_send))
+    #bytes_val = angle_send.to_bytes(2, 'big', signed=True)
+    bytes_data = struct.pack('>h', angle_send)
+    print(bytes_data)
     ser.write(str.encode('d'))
-    ser.write(bytes_val)
-    if(bytes_val == ser.read(2)):
+    ser.write(bytes_data)
+    if(bytes_data == ser.read(2)):
         print("[ angle  ]: received")
     else:
         ser.write(b'\x00') 
@@ -111,14 +117,15 @@ while True:
             if(i.tag_id == test_tag_id):
                 cent = i.center
                 Pose_R = i.pose_R
-                Pose_T = i.pose_tspot
+                Pose_T = i.pose_t
                 # print(i)
                 unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
                 # print("relative pos: ")
-                # print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
+                print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
                 angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[0])*(180/math.pi))
+                angle_temp = angle
                 angle = int(90-abs(angle))
-                if(angle > 0):
+                if(angle_temp > 0):
                     angle = angle * -1
 
                 distance = abs(int(unofficial_tag_position[2]*1000*distanceScale)) 
@@ -130,21 +137,21 @@ while True:
                 print("[distance]: "+str(distance))
                 #cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
                 #cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
+        if(len(result) > 0):
+            angleStore = int(angleStore/len(result))
+            distanceStore = int(distanceStore/len(result))
 
-        angleStore = angleStore/len(result)
-        distanceStore = distanceStore/len(result)
-
-        if(movementDone == True and hasRotated == False):
-            movementDone = False
-            # hasRotated = True            
-            send_angle(angleStore)
-        if(movementDone == True and hasRotated == True):
-            movementDone = False
-            hasRotated = False
-            send_distance(distanceStore)
-        
-        angleStore = 0
-        distanceStore = 0
+            if(movementDone == True and hasRotated == False):
+                movementDone = False
+                hasRotated = True            
+                send_angle(angleStore)
+            if(movementDone == True and hasRotated == True):
+                movementDone = False
+                hasRotated = False
+                send_distance(distanceStore)
+            
+            angleStore = 0
+            distanceStore = 0
         
         #check if movmement is done - arduino sends 0x61 on move done. 
         readS = ser.read(1)
@@ -152,9 +159,10 @@ while True:
                 print("[movement] Done")
                 print()
                 movementDone = True 
+                time.sleep(0.1)
         #cv.imshow('frame', frame)
-    except i:
-        print(i)
+    except Exception as e: 
+        print(e)
         break
 # When everything done, release the capture
 cap.release()
