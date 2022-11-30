@@ -15,9 +15,9 @@
 //5041.748 steps per rotation 360 degrees
 //~ 14 steps per degree
 
-double movLin_mmStep = 0.3638996139; //mm per step
-double movLin_stepMM = 2.7480106101; //steps per mm
-double rot_stepDeg = 14.005; //steps per degree
+float movLin_mmStep = 0.3638996139; //mm per step
+float movLin_stepMM = 2.7480106101; //steps per mm
+float rot_stepDeg = 14.005; //steps per degree
 
 
 #define COMM_TIMEOUT 100
@@ -73,7 +73,7 @@ void loop() {
     if(command[0] == 'd'){
       command.remove(0,1);
       int angle = command.toInt();
-      double a_toPass = abs(angle);
+      float a_toPass = abs(angle);
       if(angle != -1){
         if(angle>0){
           rotateRobot(a_toPass, clockwise, SPD_rotate);
@@ -98,7 +98,7 @@ void loop() {
           }
         command.remove(0,1);
         int distance = command.toInt();
-        double d_toPass = abs(distance);
+        float d_toPass = abs(distance*10.0);
         moveRobot(d_toPass, armDir, SPD_linear);
         delay(50);
         sendDone();
@@ -236,7 +236,7 @@ if(motorID == 1){
 }
 }
 
-void rotateRobot(double deg, bool cw, int spd){
+void rotateRobot(float deg, bool cw, int spd){
   int steps = int(rot_stepDeg * deg);
   
   setMotorDir(1, cw);
@@ -256,8 +256,8 @@ void rotateRobot(double deg, bool cw, int spd){
 // **moveRobot Notes**
 //dirColor : RBGW, Red Black Green White arm direciton.
 // R = 1, B = 2 ....
-void moveRobot(double distanceMM, int dirColor, int spd){ 
-  int steps = int(movLin_stepMM * distanceMM);
+void moveRobot(float distanceMM, int dirColor, int spd){ 
+  int steps = (movLin_stepMM * distanceMM);
   
   if(dirColor == 1 || dirColor == 2){ //Red or Black
     setMotorDir(1, clockwise); //for black dir
@@ -375,8 +375,6 @@ String checkForSerialAngleDist(){
   }
 
 void sendDone(){
-  Serial.write('a');
-  delay(10);
   Serial.write('a');
   }
 

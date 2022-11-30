@@ -13,7 +13,7 @@ import time
 
 #global consts
 test_tag_id = 0
-distanceScale = 0.25
+distanceScale = 0.75
 
 cam_id_L = 0 #"/dev/video0"
 scale = 1.0
@@ -21,8 +21,9 @@ scale = 1.0
 font = cv.FONT_HERSHEY_SIMPLEX
 
 #global vars
+#global movementDone
 movementDone = True
-hasRotated = False
+stepCounter = 0
 
 #functions
 def rescale_frame(frame, percent=75):
@@ -45,7 +46,7 @@ def send_distance(distance, direction = 'b'):
         ser.write(b'\x00') 
         ser.write(b'\x00') 
         ser.write(b'\x00') 
-        movementDone = True 
+       # movementDone = True 
         time.sleep(0.1)
 
 def send_angle(angle):
@@ -62,7 +63,7 @@ def send_angle(angle):
         ser.write(b'\x00') 
         ser.write(b'\x00') 
         ser.write(b'\x00') 
-        movementDone = True
+       # movementDone = True
         time.sleep(0.1)
 
 #arduino connect pySerial
@@ -88,7 +89,7 @@ if not cap.isOpened():
 #APTag detector init.
 at_detector = Detector(
    families="tag36h11",
-   nthreads=4,
+   nthreads=1,
    quad_decimate=1.0,
    quad_sigma=0.0,
    refine_edges=1,
@@ -112,9 +113,9 @@ while True:
         hei = img_size[0]
         angleStore = 0
         distanceStore = 0
-        
+    
         for i in result: #for each detected aprilTag. 
-            if(i.tag_id == test_tag_id):
+            if(True):#i.tag_id == test_tag_id):
                 cent = i.center
                 Pose_R = i.pose_R
                 Pose_T = i.pose_t
@@ -128,7 +129,7 @@ while True:
                 if(angle_temp > 0):
                     angle = angle * -1
 
-                distance = abs(int(unofficial_tag_position[2]*1000*distanceScale)) 
+                distance = abs(int(unofficial_tag_position[2]*100*distanceScale)) 
 
                 angleStore += angle
                 distanceStore += distance
@@ -141,17 +142,39 @@ while True:
             angleStore = int(angleStore/len(result))
             distanceStore = int(distanceStore/len(result))
 
-            if(movementDone == True and hasRotated == False):
-                movementDone = False
-                hasRotated = True            
-                send_angle(angleStore)
-            if(movementDone == True and hasRotated == True):
-                movementDone = False
-                hasRotated = False
-                send_distance(distanceStore)
+            if(movementDone == True):
+                if(stepCounter == 0):
+                  #  movementDone = False     
+                   # send_angle(angleStore)
+                    stepCounter = 1       
+                elif(stepCounter == 1):
+                    movementDone = False
+                    stepCounter = 2
+                    send_distance(distanceStore)
+                elif(stepCounter == 3):
+                    movementDone = False
+                    send_angle(angleStore)
+                    stepCounter = 4           
+                elif(stepCounter == 4):
+                    movementDone = False
+                    stepCounter = 5
+                    send_distance(distanceStore)
+                elif(stepCounter == 5):
+                    movementDone = False
+                    stepCounter = 6
+                    send_distance(distanceStore)
+                angleStore = 0
+                distanceStore = 0
+        if(movementDone == True and stepCounter == 2):
+            movementDone = False
+            stepCounter = 3
+            send_angle(90)
+        
+        elif(movementDone == True and stepCounter == 6):
+            stepCounter = 0
+            entered_value = input('press button to restart.\n')
             
-            angleStore = 0
-            distanceStore = 0
+            
         
         #check if movmement is done - arduino sends 0x61 on move done. 
         readS = ser.read(1)
