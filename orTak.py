@@ -93,10 +93,11 @@ class OrTak:
         print("What would you like to order?")
         while True:
             item = self.__speechToText()
-
+            print(item)
             if item == "no":
                 print("Any special requests?")
                 specialRequestRaw = self.__speechToText()
+                print(specialRequestRaw)
                 if specialRequestRaw != 'no':
                     self.specialRequests = specialRequestRaw
                 break
@@ -108,6 +109,7 @@ class OrTak:
                     if qty.isnumeric():
                         break
                     print("Please repeat yourself!")
+                print(qty)
                 self.itemArray.append((item, int(qty)))
                 self.itemCount += int(qty)
                 self.cost += int(qty) * self.menu[item]
