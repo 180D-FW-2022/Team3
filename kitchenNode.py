@@ -18,15 +18,12 @@ class KitchenNode:
       client.subscribe(mqttTopics.WOKerReadyTopic, qos=1)
       pass
       
-    # The callback of the client when it disconnects. 
   def __on_disconnect(self, client, userdata, rc): 
     if rc != 0: 
       print('Unexpected Disconnect')
     else:
       print('Expected Disconnect')
 
-  # The default message callback. 
-  # (you can create separate callbacks per subscribed topic)
   def __orderReceive(self, client, userdata, message): 
     rawString = message.payload
     # format: TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
@@ -46,12 +43,13 @@ class KitchenNode:
       "itemsArray": itemsArray,
       "totalItems": total,
       "cost": cost,
-      "specialRequests":specialRequests
+      "specialRequests": specialRequests
     }
     self.orderList.append(completeOrder)
-    print("---")
-    print(self.orderList)
-    pass
+    # print("---")
+    # for order in self.orderList:
+        # print(order)
+    print("Order queue length: ", len(self.orderList))
 
   def __orderComplete(self, event=None):
     print("orderComplete")
@@ -69,8 +67,6 @@ class KitchenNode:
       self.orderPending = False
       self.WOKerReady = False
       print("Order sent")
-    else:
-      print("Queue empty already!")
     pass
 
   def __WOKerTest(self, event=None):
@@ -78,8 +74,7 @@ class KitchenNode:
     self.WOKerReady = True
   
 
-  def main(self):
-
+  def run(self):
     self.client.on_connect = self.__on_connect
     self.client.on_disconnect = self.__on_disconnect
     self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
@@ -89,16 +84,13 @@ class KitchenNode:
 
     self.client.loop_start()
 
-    keyboard.on_release_key('p', self.__orderComplete) # Mark order as complete
+    # keyboard.on_release_key('p', self.__orderComplete) # Mark order as complete
     keyboard.on_release_key('t', self.__WOKerTest) # set WOKer as ready; only intended for testing
 
-    while True:
-      self.__orderSend() #constantly check
-      pass
+    # while True:
+    #   self.__orderSend() #constantly check
+    #   pass
 
-    self.client.loop_stop()
-    self.client.disconnect()
-
-    
-mainNode = KitchenNode()
-mainNode.main()
+  
+# mainNode = KitchenNode()
+# mainNode.run()
