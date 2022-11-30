@@ -9,7 +9,7 @@ class KitchenNode:
   client = mqtt.Client()
   orderPending = False
   WOKerReady = False
-  readyTable = deque()
+  readyTables = deque()
 
   def __init__(self):
     pass
@@ -55,7 +55,7 @@ class KitchenNode:
 
   def orderComplete(self):
     self.orderPending = True
-    print("Table", self.readyTable[0], "pending")
+    print("Table", self.readyTables[0], "pending")
 
       
   def __WOKerReadyState(self, client, userdata, message):
@@ -63,11 +63,12 @@ class KitchenNode:
 
   def orderSend(self, event=None):
     if self.orderPending == True and self.WOKerReady == True and len(self.orderList) != 0:
-      self.client.publish(mqttTopics.WOKerTableNumberTopic, self.readyTable[0], qos=1)
+      self.client.publish(mqttTopics.WOKerTableNumberTopic, self.readyTables[0], qos=1)
       self.client.publish(mqttTopics.WOKerGoTopic, True, qos=1)
-      print("WOKer ready for table", self.readyTable[0])
-      self.readyTable.popleft()
-      if len(self.readyTable) == 0:
+      print("WOKer ready for table", self.readyTables[0])
+      self.readyTables.popleft()
+      self.orderList.popleft()
+      if len(self.readyTables) == 0:
         self.orderPending = False
       self.WOKerReady = False
       self.client.publish(mqttTopics.WOKerGoTopic, False, qos=1)

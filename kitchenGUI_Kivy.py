@@ -15,8 +15,10 @@ from collections import deque
 class KitchenGUI(MDApp):
     mainKitchenNode = kitchenNode.KitchenNode()
     orderList = []
-    servingTable = -99
+    readyTable = -99
     tableNoExists = True
+    latestOrder = []
+    prevNotReadyOrderTables = []
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -51,10 +53,14 @@ class KitchenGUI(MDApp):
         self.orderList = self.mainKitchenNode.orderList.copy()
 
     def checkForOrder(self, dt, event=None):
-        if self.orderList != self.mainKitchenNode.orderList:
-            self.orderList = self.mainKitchenNode.orderList.copy()
-            if len(self.orderList) != 0:
-                self.addRows(self.orderList[len(self.orderList)-1]) #add rows
+        # if self.orderList != self.mainKitchenNode.orderList:
+        #     self.orderList = self.mainKitchenNode.orderList.copy()
+        #     if len(self.orderList) != 0:
+        #         self.addRows(self.orderList[len(self.orderList)-1]) #add rows
+        if len(self.mainKitchenNode.orderList) > 0:
+            if self.latestOrder != self.mainKitchenNode.orderList[len(self.mainKitchenNode.orderList)-1]:
+                self.latestOrder = self.mainKitchenNode.orderList[len(self.mainKitchenNode.orderList)-1]
+                self.addRows(self.latestOrder) #add rows
     
     def addRows(self, latestItem):
         newTableNumber = latestItem["tableNumber"]
@@ -63,8 +69,8 @@ class KitchenGUI(MDApp):
         pass
 
     def on_check_press(self, instance_table, instance_row):
-        self.servingTable = int(self.data_tables.row_data[0][0])
-        print(self.servingTable)
+        # self.servingTable = int(self.data_tables.row_data[0][0])
+        # print(self.servingTable)
         rowCount = 0
         index = instance_table.row_data.index(instance_row)*3
         cols_num = len(instance_table. column_data)
@@ -72,22 +78,35 @@ class KitchenGUI(MDApp):
         cell_row =instance_table.table_data.view_adapter.get_visible_view(row_num*cols_num)
         cell_row.change_check_state_no_notify("normal")
         instance_table.remove_row(instance_row) 
-        # print("Serving: ", self.servingTable)
-        for row in self.data_tables.row_data:
-            rowCount = rowCount+1
-            row_list = list(row)
-            if row_list[0] == str(self.servingTable):
-                self.tableNoExists = True
-                break
-            else:
-                self.tableNoExists = False
-        # print("tableNoExists: ", self.tableNoExists)
 
-        if (self.tableNoExists == False or rowCount == 0):
-            print("Table", self.servingTable, "Ready")
-            self.mainKitchenNode.readyTable.append(self.servingTable)
-            print(self.mainKitchenNode.readyTable)
+        notReadyOrderTables = []
+        for i in self.data_tables.row_data:
+            if i[0][0] not in notReadyOrderTables:
+                notReadyOrderTables.append(i[0][0])
+        if (len(self.prevNotReadyOrderTables) != 0 and self.prevNotReadyOrderTables != notReadyOrderTables):
+            self.readyTable = next(iter(set(self.prevNotReadyOrderTables) - set(notReadyOrderTables)))
+            print("Table", self.readyTable, "Ready")
+            self.mainKitchenNode.readyTables.append(self.readyTable)
+            print(self.mainKitchenNode.readyTables)
             self.mainKitchenNode.orderComplete()
+        self.prevNotReadyOrderTables = notReadyOrderTables.copy()
+
+        # # print("Serving: ", self.servingTable)
+        # for row in self.data_tables.row_data:
+        #     rowCount = rowCount+1
+        #     row_list = list(row)
+        #     if row_list[0] == str(self.servingTable):
+        #         self.tableNoExists = True
+        #         break
+        #     else:
+        #         self.tableNoExists = False
+        # # print("tableNoExists: ", self.tableNoExists)
+
+        # if (self.tableNoExists == False or rowCount == 0):
+        #     print("Table", self.servingTable, "Ready")
+        #     self.mainKitchenNode.readyTable.append(self.servingTable)
+        #     print(self.mainKitchenNode.readyTable)
+        #     self.mainKitchenNode.orderComplete()
 
 if __name__ == "__main__":
     GUI = KitchenGUI()
