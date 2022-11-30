@@ -9,6 +9,7 @@ class KitchenNode:
   client = mqtt.Client()
   orderPending = False
   WOKerReady = False
+  readyTable = deque()
 
   def __init__(self):
     pass
