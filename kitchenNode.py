@@ -51,7 +51,7 @@ class KitchenNode:
     # print("---")
     # for order in self.orderList:
         # print(order)
-    print("Order queue length: ", len(self.orderList))
+    # print("Order queue length: ", len(self.orderList))
 
   def orderComplete(self):
     self.orderPending = True
@@ -65,7 +65,7 @@ class KitchenNode:
     if self.orderPending == True and self.WOKerReady == True and len(self.orderList) != 0:
       self.client.publish(mqttTopics.WOKerTableNumberTopic, self.readyTables[0], qos=1)
       self.client.publish(mqttTopics.WOKerGoTopic, True, qos=1)
-      print("WOKer ready for table", self.readyTables[0])
+      print("WOKer going to table", self.readyTables[0])
       self.readyTables.popleft()
       self.orderList.popleft()
       if len(self.readyTables) == 0:

@@ -67,10 +67,14 @@ class KitchenGUI(MDApp):
         for item in latestItem["itemsArray"]:
             self.data_tables.add_row(list((newTableNumber, item[0], item[1])))
         pass
-
     def on_check_press(self, instance_table, instance_row):
         # self.servingTable = int(self.data_tables.row_data[0][0])
         # print(self.servingTable)
+        prevNotReadyOrderTables = []
+        for i in self.data_tables.row_data:
+            if i[0] not in prevNotReadyOrderTables:
+                prevNotReadyOrderTables.append(i[0])
+        
         rowCount = 0
         index = instance_table.row_data.index(instance_row)*3
         cols_num = len(instance_table. column_data)
@@ -78,18 +82,24 @@ class KitchenGUI(MDApp):
         cell_row =instance_table.table_data.view_adapter.get_visible_view(row_num*cols_num)
         cell_row.change_check_state_no_notify("normal")
         instance_table.remove_row(instance_row) 
+        
+        newNotReadyOrderTables = []
+        for i in instance_table.row_data:
+            if i[0] not in newNotReadyOrderTables:
+                newNotReadyOrderTables.append(i[0])                
 
-        notReadyOrderTables = []
-        for i in self.data_tables.row_data:
-            if i[0][0] not in notReadyOrderTables:
-                notReadyOrderTables.append(i[0][0])
-        if (len(self.prevNotReadyOrderTables) != 0 and self.prevNotReadyOrderTables != notReadyOrderTables):
-            self.readyTable = next(iter(set(self.prevNotReadyOrderTables) - set(notReadyOrderTables)))
+        if (len(set(prevNotReadyOrderTables) - set(newNotReadyOrderTables)) != 0):
+            
+            print(set(prevNotReadyOrderTables) - set(newNotReadyOrderTables))
+            print("length: " , len(set(prevNotReadyOrderTables) - set(newNotReadyOrderTables)))
+            # for i in (set(prevNotReadyOrderTables) - set(newNotReadyOrderTables)):
+            #     print(i)
+            self.readyTable = next(iter(set(prevNotReadyOrderTables) - set(newNotReadyOrderTables)))
             print("Table", self.readyTable, "Ready")
             self.mainKitchenNode.readyTables.append(self.readyTable)
             print(self.mainKitchenNode.readyTables)
             self.mainKitchenNode.orderComplete()
-        self.prevNotReadyOrderTables = notReadyOrderTables.copy()
+        # self.prevNotReadyOrderTables = notReadyOrderTables.copy()
 
         # # print("Serving: ", self.servingTable)
         # for row in self.data_tables.row_data:
