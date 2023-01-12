@@ -98,7 +98,7 @@ void loop() {
           }
         command.remove(0,1);
         int distance = command.toInt();
-        double d_toPass = abs(distance);
+        double d_toPass = abs(distance)*10.0;
         moveRobot(d_toPass, armDir, SPD_linear);
         delay(50);
         sendDone();
