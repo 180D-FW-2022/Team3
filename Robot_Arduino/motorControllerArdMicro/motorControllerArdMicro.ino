@@ -59,7 +59,6 @@ int motorStepsArr[4] = {0,0,0,0}; //number of steps left for each motor.
 
 void setup() {
   portSetup();
-  setMotorTorqueAll(1);
   Timer1.initialize(10000); //every 10ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
   Serial.begin(115200);
@@ -70,6 +69,7 @@ void setup() {
 void loop() {
   String command = checkForSerialAngleDist();
   if(command != "-1"){
+    setMotorTorqueAll(1);
     if(command[0] == 'd'){
       command.remove(0,1);
       int angle = command.toInt();
@@ -103,6 +103,7 @@ void loop() {
         delay(50);
         sendDone();
         }
+        setMotorTorqueAll(0);
     }
     delay(100);
     command = "";
@@ -277,7 +278,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(4, spd);
         }
      }else{
-      for(int i = 0; i < steps; i++){
+      for(int i = 0; i < steps; i++){ 
         stepMotor(1, spd);
         stepMotor(3, spd);
         }
