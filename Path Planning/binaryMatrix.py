@@ -37,7 +37,7 @@ alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, 
 
 alleyF = np.concatenate((alley_h,alleyAndV,alley_h), axis = 0)
 
-alleyF = np.zeros((20,20))
+#alleyF = np.zeros((20,20))
 
 #print(alleyF)
 
@@ -55,7 +55,7 @@ plt.xlim(-2,20)
 plt.ylim(0,25)
 
 plt.draw()
-arr = helper(alleyF, 14, 5, 14, 4) #y-start, x-start, y-end, x-end
+arr = helper(alleyF, 12, 5, 5, 1) #y-start, x-start, y-end, x-end
 cnt = 0
 arr_direction_y = []
 arr_direction_x = []
