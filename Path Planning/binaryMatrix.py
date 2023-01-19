@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
-def helper(grid, start_m, start_n, goal_m, goal_n):
+def helper(grid, start_m, start_n, goal_m, goal_n): 
     m,n=len(grid),len(grid[0])
     deque=collections.deque([[(start_m,start_n)]])
     seen=set()
@@ -37,9 +37,12 @@ alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, 
 
 alleyF = np.concatenate((alley_h,alleyAndV,alley_h), axis = 0)
 
-print(alleyF)
+alleyF = np.zeros((20,20))
 
+#print(alleyF)
 
+robotDir = 0 #90, 180, 270.
+needMoveDir = 0
 
 plt.ion()
 fig, ax = plt.subplots()
@@ -52,17 +55,60 @@ plt.xlim(-2,20)
 plt.ylim(0,25)
 
 plt.draw()
-for i in range(2,20):
-    arr = helper(alleyF, i, 0, 14, 5)
-    x.clear()
-    y.clear()
-    for i in arr: 
-            y.append(i[0])
-    for i in arr: 
-            x.append(i[1])
-    sc.set_offsets(np.c_[x,y])
-    fig.canvas.draw_idle()
-    #print(arr)
-    plt.pause(1)
+arr = helper(alleyF, 14, 5, 14, 4)
+cnt = 0
+arr_direction_y = []
+arr_direction_x = []
+arr_angle = []
+for i in arr:
+    if(cnt>0):
+        y_dir = i[0]-arr[cnt-1][0]
+        x_dir = i[1]-arr[cnt-1][1]
+        arr_direction_y.append(y_dir)
+        arr_direction_x.append(x_dir)
+        angle = 0
+        if(y_dir == 1):
+            angle = 0
+        elif(y_dir == -1):
+            angle = 180
+        elif(x_dir == 1):
+            angle = 90
+        elif(x_dir == -1):
+            angle = 270
+        arr_angle.append(angle)
+    cnt+=1
+
+j_prev = arr_angle[0]
+distance = 0
+arr_distance = []
+arr_angle_clean = []
+counter = 0
+for j in arr_angle:
+    counter+= 1
+    if(j == j_prev and counter <= len(arr_angle)):
+        j_prev = j
+        distance+=0.5   
+        if(counter == len(arr_angle)):
+            arr_distance.append(distance)
+            arr_angle_clean.append(j_prev)
+            distance = 0
+    else:    
+        if(distance != 0):
+            arr_distance.append(distance)
+            arr_angle_clean.append(j_prev)
+            distance = 0
+        j_prev = j
+print(arr_distance)
+print(arr_angle_clean)
+
+x.clear()
+y.clear()
+for i in arr: 
+        y.append(i[0])
+for i in arr: 
+        x.append(i[1])
+sc.set_offsets(np.c_[x,y])
+fig.canvas.draw_idle()
+#print(arr)
 
 plt.waitforbuttonpress()

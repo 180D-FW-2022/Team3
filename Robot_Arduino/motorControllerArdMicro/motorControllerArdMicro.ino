@@ -75,7 +75,7 @@ void loop() {
       int angle = command.toInt();
       double a_toPass = abs(angle);
       if(angle != -1){
-        if(angle>0){
+        if(angle>0){ 
           rotateRobot(a_toPass, clockwise, SPD_rotate);
           delay(200);
           sendDone();

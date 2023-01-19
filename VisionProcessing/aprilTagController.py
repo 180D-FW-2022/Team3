@@ -15,7 +15,7 @@ import time
 test_tag_id = 0
 distanceScale = 0.75
 
-cam_id_L = 0 #"/dev/video0"
+cam_id = 0 #"/dev/video0"
 scale = 1.0
 
 font = cv.FONT_HERSHEY_SIMPLEX
@@ -81,7 +81,7 @@ time.sleep(2)
 print(ser.name)         # check which port was really used
 
 #video init.
-cap = cv.VideoCapture(cam_id_L)
+cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
     print("[ camera ] Cannot open")
     exit()
