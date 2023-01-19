@@ -55,7 +55,7 @@ plt.xlim(-2,20)
 plt.ylim(0,25)
 
 plt.draw()
-arr = helper(alleyF, 14, 5, 14, 4)
+arr = helper(alleyF, 14, 5, 14, 4) #y-start, x-start, y-end, x-end
 cnt = 0
 arr_direction_y = []
 arr_direction_x = []
