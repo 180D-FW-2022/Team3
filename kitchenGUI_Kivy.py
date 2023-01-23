@@ -9,8 +9,9 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.screen import Screen
-import kitchenNode
 from collections import deque
+
+import kitchenNode
 
 class KitchenGUI(MDApp):
     mainKitchenNode = kitchenNode.KitchenNode()
