@@ -1,4 +1,5 @@
-import orTak
+
+from ...  import orTak
 from time import sleep
 import random
 
