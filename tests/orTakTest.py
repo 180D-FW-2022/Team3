@@ -1,7 +1,6 @@
-
-from ...  import orTak
 from time import sleep
 import random
+import orTak
 
 sampleItemOrder=[("chicken sandwich", 4), ("milkshake", 5)]
 
