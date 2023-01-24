@@ -1,7 +1,13 @@
 import speech_recognition as sr
 import paho.mqtt.client as mqtt
 import mqttTopics
-import firebase
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+
+cred = credentials.Certificate("firebase_key.json")
+default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
+ref = db.reference("/")
 
 class OrTak:
     #menu dictionary with items and prices
@@ -20,7 +26,7 @@ class OrTak:
     cost = 0
 
     def __init__(self, tableNumberArg):
-        self.tableNumber = tableNumberArg
+        self.tableNumber = tableNumberArg 
         pass
 
     def __resetTable(self):
@@ -45,19 +51,20 @@ class OrTak:
         return text
     
     def __sendOrder(self):
-        firebase.ref
         # Example string; TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
         itemString = ''
         for item in self.itemArray:
             itemString += item[0].lower() + '-' + str(item[1]) + ','
         itemString = itemString[:-1]
 
+        print(ref.get("fdasfsd"))
+
+        orderJson = {
+
+        }
+
         orderString = "TN:"+str(self.tableNumber)+";Items:"+itemString+";Tot:"+str(self.itemCount)+";Cost:"+str(self.cost)+";SR:"+self.specialRequests
         print(orderString)
-
-        currentOrderNumber = firebase.ref.get("orderNumber")+1
-        print(currentOrderNumber)
-        # firebase.ref.child("/Orders/Table ").update
 
         def on_connect(client, userdata, flags, rc):
             print("Connection returned result: "+str(rc))
