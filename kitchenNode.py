@@ -2,6 +2,8 @@ import paho.mqtt.client as mqtt
 from collections import deque
 import keyboard
 import mqttTopics
+import firebase
+
 
 class KitchenNode:
   orderList = deque()
