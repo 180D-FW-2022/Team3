@@ -4,10 +4,7 @@ import mqttTopics
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
-
-cred = credentials.Certificate("firebase_key.json")
-default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
-ref = db.reference("/")
+import firebase
 
 class OrTak:
     #menu dictionary with items and prices
@@ -27,6 +24,7 @@ class OrTak:
 
     def __init__(self, tableNumberArg):
         self.tableNumber = tableNumberArg 
+        firebase.resetFirebase()
         pass
 
     def __resetTable(self):
@@ -57,11 +55,24 @@ class OrTak:
             itemString += item[0].lower() + '-' + str(item[1]) + ','
         itemString = itemString[:-1]
 
-        print(ref.get("fdasfsd"))
+        nextOrder = str(int(firebase.ref.child("currentOrder").get()) + 1)
 
-        orderJson = {
-
+        order = {
+            "tableNumber": self.tableNumber,
+            "cost": self.cost,
+            "specialRequests": self.specialRequests,
+            "itemCount": self.itemCount,
         }
+
+        currentOrderRef = firebase.ref.child("orders/order" + str(nextOrder))
+        currentOrderRef.set(order)
+        firebase.ref.child("currentOrder").set(nextOrder)
+        for item in self.itemArray:
+            # print(type(item))
+            currentOrderRef.child("items/"+item[0]).set(item[1])
+            print(item[0])
+            print(item[1])
+            pass
 
         orderString = "TN:"+str(self.tableNumber)+";Items:"+itemString+";Tot:"+str(self.itemCount)+";Cost:"+str(self.cost)+";SR:"+self.specialRequests
         print(orderString)
