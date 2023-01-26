@@ -11,6 +11,7 @@ import serial
 import serial.tools.list_ports
 import time
 
+test_mode = 1
 #global consts
 test_tag_id = 0
 distanceScale = 0.75
@@ -33,52 +34,55 @@ def rescale_frame(frame, percent=75):
     return cv.resize(frame, dim, interpolation =cv.INTER_AREA)
 
 def send_distance(distance, direction = 'b'):
-    distance_send = int(abs(distance))
-    print("[distance]: move: "+ str(distance_send))
-    #bytes_val = distance_send.to_bytes(2, 'big', signed=True)
-    bytes_data = struct.pack('>h', distance_send)
-    print(bytes_data)
-    ser.write(str.encode('b'))
-    ser.write(bytes_data)
-    if(bytes_data == ser.read(2)):
-        print("[distance]: received")
-    else:
-        ser.write(b'\x00') 
-        ser.write(b'\x00') 
-        ser.write(b'\x00') 
-       # movementDone = True 
-        time.sleep(0.1)
+    if(test_mode == 0):  
+        distance_send = int(abs(distance))
+        print("[distance]: move: "+ str(distance_send))
+        #bytes_val = distance_send.to_bytes(2, 'big', signed=True)
+        bytes_data = struct.pack('>h', distance_send)
+        print(bytes_data)
+        ser.write(str.encode('b'))
+        ser.write(bytes_data)
+        if(bytes_data == ser.read(2)):
+            print("[distance]: received")
+        else:
+            ser.write(b'\x00') 
+            ser.write(b'\x00') 
+            ser.write(b'\x00') 
+        # movementDone = True 
+            time.sleep(0.1)
 
 def send_angle(angle):
-    angle_send = int(angle)
-    print("[ angle  ]: move: "+str(angle_send))
-    #bytes_val = angle_send.to_bytes(2, 'big', signed=True)
-    bytes_data = struct.pack('>h', angle_send)
-    print(bytes_data)
-    ser.write(str.encode('d'))
-    ser.write(bytes_data)
-    if(bytes_data == ser.read(2)):
-        print("[ angle  ]: received")
-    else:
-        ser.write(b'\x00') 
-        ser.write(b'\x00') 
-        ser.write(b'\x00') 
-       # movementDone = True
-        time.sleep(0.1)
+    if(test_mode == 0):  
+        angle_send = int(angle)
+        print("[ angle  ]: move: "+str(angle_send))
+        #bytes_val = angle_send.to_bytes(2, 'big', signed=True)
+        bytes_data = struct.pack('>h', angle_send)
+        print(bytes_data)
+        ser.write(str.encode('d'))
+        ser.write(bytes_data)
+        if(bytes_data == ser.read(2)):
+            print("[ angle  ]: received")
+        else:
+            ser.write(b'\x00') 
+            ser.write(b'\x00') 
+            ser.write(b'\x00') 
+        # movementDone = True
+            time.sleep(0.1)
 
 #arduino connect pySerial
-arduino_ports = [
-    p.device
-    for p in serial.tools.list_ports.comports()
-    if ('Arduino' in p.description or 'USB Serial' in p.description)  # may need tweaking to match new arduinos
-]
-if not arduino_ports:
-    raise IOError("[arduino ] Not found")
-if len(arduino_ports) > 1:
-    warnings.warn('[arduino ] Multiple found - using the first')
-ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.5)
-time.sleep(2)
-print(ser.name)         # check which port was really used
+if(test_mode == 0):
+    arduino_ports = [
+        p.device
+        for p in serial.tools.list_ports.comports()
+        if ('Arduino' in p.description or 'USB Serial' in p.description)  # may need tweaking to match new arduinos
+    ]
+    if not arduino_ports:
+        raise IOError("[arduino ] Not found")
+    if len(arduino_ports) > 1:
+        warnings.warn('[arduino ] Multiple found - using the first')
+    ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.5)
+    time.sleep(2)
+    print(ser.name)         # check which port was really used
 
 #video init.
 cap = cv.VideoCapture(cam_id)
@@ -90,7 +94,7 @@ if not cap.isOpened():
 at_detector = Detector(
    families="tag36h11",
    nthreads=1,
-   quad_decimate=1.0,
+   quad_decimate=2.0,
    quad_sigma=0.0,
    refine_edges=1,
    decode_sharpening=0.25,
@@ -103,7 +107,7 @@ while True:
     # Capture frame-by-frame
     try:
         ret, frame = cap.read()
-    #frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
+        #frame = cv.imread("175mmPrint_3.jpg", cv.IMREAD_COLOR)
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = rescale_frame(gray, 100/scale)
         result = at_detector.detect(gray, True, (978/scale, 978/scale, 930/scale, 524/scale), 0.175)
@@ -136,8 +140,8 @@ while True:
 
                 print("[ angle  ]: "+str(angle))
                 print("[distance]: "+str(distance))
-                #cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
-                #cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
+                cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
+                cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
         if(len(result) > 0):
             angleStore = int(angleStore/len(result))
             distanceStore = int(distanceStore/len(result))
@@ -177,17 +181,22 @@ while True:
             
         
         #check if movmement is done - arduino sends 0x61 on move done. 
-        readS = ser.read(1)
+        readS = 0x00
+        if(test_mode == 0):
+            readS = ser.read(1)
         if(b'\x61' == readS):
                 print("[movement] Done")
                 print()
                 movementDone = True 
                 time.sleep(0.1)
-        #cv.imshow('frame', frame)
+        cv.imshow('frame', frame)
+        if cv.waitKey(1) == ord('q'):
+            break
     except Exception as e: 
         print(e)
         break
 # When everything done, release the capture
 cap.release()
-#cv.destroyAllWindows()
-ser.close()             # close port
+cv.destroyAllWindows()
+if(test_mode == 0):     
+    ser.close()             # close port
