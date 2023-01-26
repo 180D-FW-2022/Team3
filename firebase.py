@@ -2,8 +2,6 @@
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
-import random
-
 
 cred = credentials.Certificate("firebase_key.json")
 default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
@@ -17,7 +15,7 @@ def resetFirebase():
     __wipeFirebase()
     ref.update({
         "Ready":False,
-        "tableNumber": random.randint(-10,-1),
+        "tableNumber": -99,
         "kitchenReady" : False,
         "WOKerReady": False,
         "currentOrder": 0
