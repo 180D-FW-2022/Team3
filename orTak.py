@@ -54,7 +54,7 @@ class OrTak:
             itemString += item[0].lower() + '-' + str(item[1]) + ','
         itemString = itemString[:-1]
 
-        nextOrder = str(int(firebase.ref.child("currentOrder").get()) + 1)
+        orderNumber = str(int(firebase.ref.child("currentOrder").get()) + 1)
 
         itemDict = {}
 
@@ -67,7 +67,8 @@ class OrTak:
             "cost": self.cost,
             "specialRequests": self.specialRequests,
             "itemCount": self.itemCount,
-            "items": itemDict
+            "items": itemDict,
+            "orderNumber": int(orderNumber)
         }
 
         # for item in self.itemArray:
@@ -77,9 +78,9 @@ class OrTak:
         #     print(item[1])
         #     pass
 
-        firebase.ref.child("orders/order" + str(nextOrder)).set(orderDict)
+        firebase.ref.child("sentOrders/order" + str(orderNumber)).set(orderDict)
         # currentOrderRef.set(orderDict)
-        firebase.ref.child("currentOrder").set(nextOrder)
+        firebase.ref.child("currentOrder").set(orderNumber)
 
         orderString = "TN:"+str(self.tableNumber)+";Items:"+itemString+";Tot:"+str(self.itemCount)+";Cost:"+str(self.cost)+";SR:"+self.specialRequests
         print(orderString)

@@ -35,13 +35,15 @@ class KitchenNode:
     # print(event.data)  # new data at /reference/event.path. None if deleted
     # print(event.data)
     # print("---")
-    print(event.data)
-    if (len(event.data) > 1):
+    # print(event.data)
+    if (event.data == None):
+      return
+    if (len(event.data) > 0):
       for i in event.data.items():
         self.orderList.append(i[1])
         # print(i[1])
     # self.orderList.append(event.data)
-    print("endOrderReceive")
+    # print("endOrderReceive")
 
   def __orderReceive(self, client, userdata, message): 
     rawString = message.payload
@@ -101,7 +103,7 @@ class KitchenNode:
     # self.client.on_disconnect = self.__on_disconnect
     # self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
     # self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
-    firebase.ref.child("orders").listen(self.__orderReceiveFirebase)
+    firebase.ref.child("sentOrders").listen(self.__orderReceiveFirebase)
 
     # self.client.connect_async(mqttTopics.broker)
 
