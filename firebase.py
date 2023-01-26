@@ -10,13 +10,11 @@ default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-data
 ref = db.reference()
 
 def __wipeFirebase():
-    ref = db.reference("")
     nodes = ref.get()
     ref.delete()    
 
 def resetFirebase():
     __wipeFirebase()
-    ref = db.reference("")
     ref.update({
         "Ready":False,
         "tableNumber": random.randint(-10,-1),
@@ -25,6 +23,14 @@ def resetFirebase():
         "currentOrder": 0
     })
 
+def getCurrentTable():
+    return (ref.child("tableNumber").get())
+
+def isKitchenReady():
+    return (ref.child("kitchenReady").get())
+
+def setWOKerReady(state):
+    ref.child("WOKerReady").set(state)
 
 # print(ref.child("tableNumber").get())
 # Retrieve services via the auth package...

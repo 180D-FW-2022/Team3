@@ -60,14 +60,21 @@ class KitchenGUI(MDApp):
         #         self.addRows(self.orderList[len(self.orderList)-1]) #add rows
         if len(self.mainKitchenNode.orderList) > 0:
             if self.latestOrder != self.mainKitchenNode.orderList[len(self.mainKitchenNode.orderList)-1]:
+                for i in self.mainKitchenNode.orderList:
+                    self.addRows(i)
                 self.latestOrder = self.mainKitchenNode.orderList[len(self.mainKitchenNode.orderList)-1]
-                self.addRows(self.latestOrder) #add rows
+                # for i in self.latestOrder.items():
+                #     print(i)
+                #     self.addRows(i) #add rows
     
     def addRows(self, latestItem):
+        print(latestItem)
         newTableNumber = latestItem["tableNumber"]
-        for item in latestItem["itemsArray"]:
+        for item in latestItem["items"].items():
+            print(item)
             self.data_tables.add_row(list((newTableNumber, item[0], item[1])))
         pass
+
     def on_check_press(self, instance_table, instance_row):
         # self.servingTable = int(self.data_tables.row_data[0][0])
         # print(self.servingTable)
@@ -77,8 +84,10 @@ class KitchenGUI(MDApp):
                 prevNotReadyOrderTables.append(i[0])
         
         rowCount = 0
+        print(instance_table.row_data)
+        print(instance_row)
         index = instance_table.row_data.index(instance_row)*3
-        cols_num = len(instance_table. column_data)
+        cols_num = len(instance_table.column_data)
         row_num = int(index/cols_num)
         cell_row =instance_table.table_data.view_adapter.get_visible_view(row_num*cols_num)
         cell_row.change_check_state_no_notify("normal")

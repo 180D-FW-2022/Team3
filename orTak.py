@@ -24,7 +24,6 @@ class OrTak:
 
     def __init__(self, tableNumberArg):
         self.tableNumber = tableNumberArg 
-        firebase.resetFirebase()
         pass
 
     def __resetTable(self):
@@ -57,22 +56,30 @@ class OrTak:
 
         nextOrder = str(int(firebase.ref.child("currentOrder").get()) + 1)
 
-        order = {
+        itemDict = {}
+
+        for item in self.itemArray:
+            itemDict.update({item[0]: item[1]})
+            pass
+
+        orderDict = {
             "tableNumber": self.tableNumber,
             "cost": self.cost,
             "specialRequests": self.specialRequests,
             "itemCount": self.itemCount,
+            "items": itemDict
         }
 
-        currentOrderRef = firebase.ref.child("orders/order" + str(nextOrder))
-        currentOrderRef.set(order)
+        # for item in self.itemArray:
+        #     # print(type(item))
+        #     currentOrderRef.child("items/"+item[0]).set(item[1])
+        #     print(item[0])
+        #     print(item[1])
+        #     pass
+
+        firebase.ref.child("orders/order" + str(nextOrder)).set(orderDict)
+        # currentOrderRef.set(orderDict)
         firebase.ref.child("currentOrder").set(nextOrder)
-        for item in self.itemArray:
-            # print(type(item))
-            currentOrderRef.child("items/"+item[0]).set(item[1])
-            print(item[0])
-            print(item[1])
-            pass
 
         orderString = "TN:"+str(self.tableNumber)+";Items:"+itemString+";Tot:"+str(self.itemCount)+";Cost:"+str(self.cost)+";SR:"+self.specialRequests
         print(orderString)

@@ -28,6 +28,21 @@ class KitchenNode:
     else:
       print('Expected Disconnect')
 
+
+  def __orderReceiveFirebase(self, event):
+    # print(event.event_type)  # can be 'put' or 'patch'
+    # print(event.path)  # relative to the reference, it seems
+    # print(event.data)  # new data at /reference/event.path. None if deleted
+    # print(event.data)
+    # print("---")
+    print(event.data)
+    if (len(event.data) > 1):
+      for i in event.data.items():
+        self.orderList.append(i[1])
+        # print(i[1])
+    # self.orderList.append(event.data)
+    print("endOrderReceive")
+
   def __orderReceive(self, client, userdata, message): 
     rawString = message.payload
     # format: TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
@@ -82,18 +97,19 @@ class KitchenNode:
   
 
   def run(self):
-    self.client.on_connect = self.__on_connect
-    self.client.on_disconnect = self.__on_disconnect
-    self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
-    self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
-    
-    self.client.connect_async(mqttTopics.broker)
+    # self.client.on_connect = self.__on_connect
+    # self.client.on_disconnect = self.__on_disconnect
+    # self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
+    # self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
+    firebase.ref.child("orders").listen(self.__orderReceiveFirebase)
 
-    self.client.loop_start()
+    # self.client.connect_async(mqttTopics.broker)
+
+    # self.client.loop_start()
 
     # keyboard.on_release_key('p', self.__orderComplete) # Mark order as complete
-    keyboard.on_release_key('t', self.__WOKerTest) # set WOKer as ready; only intended for testing
-
+    # keyboard.on_release_key('t', self.__WOKerTest) # set WOKer as ready; only intended for testing
+    
     # while True:
     #   self.__orderSend() #constantly check
     #   pass
