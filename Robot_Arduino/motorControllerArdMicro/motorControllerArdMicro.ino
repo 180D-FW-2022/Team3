@@ -2,7 +2,7 @@
 #include <TimerOne.h>
 //END
 
-//#define DEBUG_SER
+#define DEBUG_SER
 //********* PIN DEFINITIONS ************
 
 #define SET 1
@@ -15,9 +15,17 @@
 //5041.748 steps per rotation 360 degrees
 //~ 14 steps per degree
 
+//622.3mm wheel to wheel --> 1955mm circumference
+//120mm wheel diamter --> 377mm circumference
+//1036 steps per revolution
+//0.3638996139mm per step.
+//5372.37 steps per rotation 360 degrees
+//~14.92 steps per degree
+
+
 double movLin_mmStep = 0.3638996139; //mm per step
 double movLin_stepMM = 2.7480106101; //steps per mm
-double rot_stepDeg = 14.005; //steps per degree
+double rot_stepDeg = 16; //steps per degree
 
 
 #define COMM_TIMEOUT 100
@@ -116,10 +124,10 @@ if(Serial.available()>0){
   int toTurn = incomingString.toInt();
   Serial.println(toTurn);
   if(toTurn > 0){
-  moveRobot(toTurn, 1, SPD);
+  rotateRobot(toTurn, clockwise, SPD_rotate);
   }else{
     toTurn = -1*toTurn;
-    moveRobot(toTurn, 3, SPD);
+    rotateRobot(toTurn, counterCW, SPD_rotate);
     }
   }
 
