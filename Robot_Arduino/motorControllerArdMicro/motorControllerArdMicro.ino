@@ -36,7 +36,11 @@ double rot_stepDeg = 16; //steps per degree
 
 //ENABLE : HIGH DISABLE
 //DIR    : LOW CLOCKWISE
+#define stepMargin 200
 
+#define SPD_1 2000
+#define SPD_2 1500
+#define SPD_3 1200
 #define SPD_linear 800
 #define SPD_rotate 400
 
@@ -124,10 +128,10 @@ if(Serial.available()>0){
   int toTurn = incomingString.toInt();
   Serial.println(toTurn);
   if(toTurn > 0){
-  rotateRobot(toTurn, clockwise, SPD_rotate);
+  moveRobot(toTurn, 2, SPD_linear);
   }else{
     toTurn = -1*toTurn;
-    rotateRobot(toTurn, counterCW, SPD_rotate);
+    moveRobot(toTurn, 4, SPD_linear);
     }
   }
 
@@ -198,22 +202,18 @@ void stepMotor(int motorID, int spdDel){
     digitalWrite(MOTOR_1_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_1_STEP, RESET);
-    //delayMicroseconds(spdDel);
   }else if(motorID == 2){
     digitalWrite(MOTOR_2_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_2_STEP, RESET);
-    //delayMicroseconds(spdDel);
   }else if(motorID == 3){ 
     digitalWrite(MOTOR_3_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_3_STEP, RESET);
-    //delayMicroseconds(spdDel);
   }else if(motorID == 4){
     digitalWrite(MOTOR_4_STEP, SET);
     delayMicroseconds(spdDel);
     digitalWrite(MOTOR_4_STEP, RESET);
-   // delayMicroseconds(spdDel);
   }
   }
 
@@ -267,7 +267,7 @@ void rotateRobot(double deg, bool cw, int spd){
 // R = 1, B = 2 ....
 void moveRobot(double distanceMM, int dirColor, int spd){ 
   int steps = int(movLin_stepMM * distanceMM);
-  
+  Serial.println(steps);
   if(dirColor == 1 || dirColor == 2){ //Red or Black
     setMotorDir(1, clockwise); //for black dir
     setMotorDir(2, counterCW); //for red dir
@@ -281,15 +281,77 @@ void moveRobot(double distanceMM, int dirColor, int spd){
       }
 
     if(dirColor == 1 || dirColor == 3){
+      if(steps<stepMargin){
       for(int i = 0; i < steps; i++){
+        stepMotor(2, SPD_1);
+        stepMotor(4, SPD_1);
+        }
+      }else{
+        for(int i = 0; i < 50; i++){
+        stepMotor(2, SPD_1);
+        stepMotor(4, SPD_1);
+        }
+        for(int i = 0; i < 30; i++){
+        stepMotor(2, SPD_2);
+        stepMotor(4, SPD_2);
+        }
+        for(int i = 0; i < 20; i++){
+        stepMotor(2, SPD_3);
+        stepMotor(4, SPD_3);
+        }
+        for(int i = 0; i < (steps-200); i++){
         stepMotor(2, spd);
         stepMotor(4, spd);
         }
+        for(int i = 0; i < 20; i++){
+        stepMotor(2, SPD_3);
+        stepMotor(4, SPD_3);
+        }
+        for(int i = 0; i < 30; i++){
+        stepMotor(2, SPD_2);
+        stepMotor(4, SPD_2);
+        }
+        for(int i = 0; i < 50; i++){
+        stepMotor(2, SPD_1);
+        stepMotor(4, SPD_1);
+        }
+      } 
      }else{
-      for(int i = 0; i < steps; i++){ 
+       if(steps<stepMargin){
+      for(int i = 0; i < steps; i++){
+        stepMotor(1, SPD_1);
+        stepMotor(3, SPD_1);
+        }
+      }else{
+        for(int i = 0; i < 50; i++){
+        stepMotor(1, SPD_1);
+        stepMotor(3, SPD_1);
+        }
+        for(int i = 0; i < 30; i++){
+        stepMotor(1, SPD_2);
+        stepMotor(3, SPD_2);
+        }
+        for(int i = 0; i < 20; i++){
+        stepMotor(1, SPD_3);
+        stepMotor(3, SPD_3);
+        }
+        for(int i = 0; i < steps-(200); i++){
         stepMotor(1, spd);
         stepMotor(3, spd);
         }
+        for(int i = 0; i < 20; i++){
+        stepMotor(1, SPD_3);
+        stepMotor(3, SPD_3);
+        }
+        for(int i = 0; i < 30; i++){
+        stepMotor(1, SPD_2);
+        stepMotor(3, SPD_2);
+        }
+        for(int i = 0; i < 50; i++){
+        stepMotor(1, SPD_1);
+        stepMotor(3, SPD_1);
+        }
+      }
       }
 }
 
