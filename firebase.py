@@ -30,6 +30,12 @@ def isKitchenReady():
 def setWOKerReady(state):
     ref.child("WOKerReady").set(state)
 
+def sendMap(map):
+    ref.child("map").set(map)
+
+def getMap():
+    return ref.child("map").get()
+
 # print(ref.child("tableNumber").get())
 # Retrieve services via the auth package...
 # auth.create_custom_token(...)
