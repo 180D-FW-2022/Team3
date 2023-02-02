@@ -68,18 +68,137 @@ def setWOKerReady(state):
 def getMap():
     return ref.child("map").get()
 
+matrix_size = 20
 
 fetched_map = getMap().split(',')
-fetched_map_matrix = np.reshape(fetched_map, (20, 20))
+fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size))
 grid_raw = fetched_map_matrix.astype(int)
-grid_display = fetched_map_matrix.astype(int)
+#grid_display = fetched_map_matrix.astype(int)
 grid_raw[grid_raw > 9] = -1
 grid_raw[grid_raw > 0] = -2
 grid_raw[grid_raw == 0] = 1
 grid_raw[grid_raw == -1] = 1
 grid_raw[grid_raw == -2] = 0
 
-print(grid_raw)
+grid_raw_copy = grid_raw.copy()
+
+populate = 1
+if populate == 1:
+    for row in range(matrix_size): #populate margins of 0.5m or 1 block around items for path planning. 
+        for column in range(matrix_size):
+            current = grid_raw[row][column]
+        # left = grid_raw[row][column-1]
+        # right = grid_raw[row][column+1]
+        # up = grid_raw[row-1][column]
+        # down = grid_raw[row+1][column]
+            if(row > 0 and row<(matrix_size-1) and column > 0 and column<(matrix_size-1)):
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = grid_raw[row][column+1]
+                    up = grid_raw[row-1][column]
+                    down = grid_raw[row+1][column]
+                    d1 = grid_raw[row-1][column-1] #up left diagonal
+                    d2 = grid_raw[row-1][column+1] #up right diag
+                    d3 = grid_raw[row+1][column-1] #down left diag
+                    d4 = grid_raw[row+1][column+1] #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == 0 and column > 0 and column<(matrix_size-1)): #top 
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = grid_raw[row][column+1]
+                    up = 1
+                    down = grid_raw[row+1][column]
+                    d1 = 1 #up left diagonal
+                    d2 = 1 #up right diag
+                    d3 = grid_raw[row+1][column-1] #down left diag
+                    d4 = grid_raw[row+1][column+1] #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == (matrix_size-1) and column > 0 and column<(matrix_size-1)): #bottom
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = grid_raw[row][column+1]
+                    up = grid_raw[row-1][column]
+                    down = 1
+                    d1 = grid_raw[row-1][column-1] #up left diagonal
+                    d2 = grid_raw[row-1][column+1] #up right diag
+                    d3 = 1 #down left diag
+                    d4 = 1 #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row > 0 and row<(matrix_size-1) and column == 0): #left
+                if(current == 1):
+                    left = 1
+                    right = grid_raw[row][column+1]
+                    up = grid_raw[row-1][column]
+                    down = grid_raw[row+1][column]
+                    d1 = 1 #up left diagonal
+                    d2 = grid_raw[row-1][column+1] #up right diag
+                    d3 = 1 #down left diag
+                    d4 = grid_raw[row+1][column+1] #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row > 0 and row<(matrix_size-1) and column==(matrix_size-1)): #right
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = 1
+                    up = grid_raw[row-1][column]
+                    down = grid_raw[row+1][column]
+                    d1 = grid_raw[row-1][column-1] #up left diagonal
+                    d2 = 1 #up right diag
+                    d3 = grid_raw[row+1][column-1] #down left diag
+                    d4 = 1 #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == 0 and column == 0): #top left
+                if(current == 1):
+                    left = 1
+                    right = grid_raw[row][column+1]
+                    up = 1
+                    down = grid_raw[row+1][column]
+                    d1 = 1 #up left diagonal
+                    d2 = 1 #up right diag
+                    d3 = 1 #down left diag
+                    d4 = grid_raw[row+1][column+1] #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == (matrix_size-1) and column == 0): #bottom left
+                if(current == 1):
+                    left = 1
+                    right = grid_raw[row][column+1]
+                    up = grid_raw[row-1][column]
+                    down = 1
+                    d1 = 1 #up left diagonal
+                    d2 = grid_raw[row-1][column+1] #up right diag
+                    d3 = 1 #down left diag
+                    d4 = 1 #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == (matrix_size-1) and column == (matrix_size-1)): #bottom right
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = 1
+                    up = grid_raw[row-1][column]
+                    down = 1
+                    d1 = grid_raw[row-1][column-1] #up left diagonal
+                    d2 = 1 #up right diag
+                    d3 = 1 #down left diag
+                    d4 = 1 #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
+            if(row == 0 and column == (matrix_size-1)): #top right
+                if(current == 1):
+                    left = grid_raw[row][column-1]
+                    right = 1
+                    up = 1
+                    down = grid_raw[row+1][column]
+                    d1 = 1 #up left diagonal
+                    d2 = 1 #up right diag
+                    d3 = grid_raw[row+1][column-1] #down left diag
+                    d4 = 1 #down right diag
+                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
+                        grid_raw_copy[row][column] = 0
 
 #arduino connect pySerial
 if(test_mode == 0):
@@ -121,9 +240,9 @@ plt.ion()
 fig, ax = plt.subplots()
 x, y = [],[]
 sc = ax.scatter(x,y)
-colorsList = ['w', 'r', 'g']
+colorsList = ['g', 'r', 'w']
 cmap = mpl.colors.ListedColormap(colorsList)
-plt.imshow(grid_display, cmap=cmap)
+plt.imshow(grid_raw_copy, cmap=cmap)
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
