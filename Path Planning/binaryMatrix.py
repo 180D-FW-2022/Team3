@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
+from pathfinding.core.diagonal_movement import DiagonalMovement
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
+
 # Import the Firebase service
 import firebase_admin
 from firebase_admin import credentials
@@ -11,21 +15,9 @@ from firebase_admin import db
 import random
 
 #test data
-grid=[
-    [1,0,0,1,0,0,1,1],
-    [1,0,0,1,0,0,0,0],
-    [1,0,0,1,0,0,1,1],
-    [1,0,0,1,0,1,1,1],
-    [1,0,0,0,0,1,1,1]
-]
-alley_v = np.zeros((9*2,1*2))
-alley_h = np.zeros((1*2, 7*2))
-table = 1*np.ones((1*2, 1*2))
-table_alley = 2*np.ones((1*2, 1*2))
-alleyAndTable_f = np.concatenate((table_alley, table, table_alley, table, table_alley, table, table_alley, table, table_alley), axis=0)
-alleyAndV = np.concatenate((alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, alley_v, alleyAndTable_f, alley_v), axis=1)
-alleyF = np.concatenate((alley_h,alleyAndV,alley_h), axis = 0)
-#test datae
+grid_raw = np.ones((20,20))
+grid_loaded = Grid(matrix=grid_raw)
+#test date
 
 
 cred = credentials.Certificate("firebase_key.json")
@@ -36,16 +28,6 @@ def __wipeFirebase():
     nodes = ref.get()
     ref.delete()    
 
-def resetFirebase():
-    __wipeFirebase()
-    ref.update({
-        "Ready":False,
-        "tableNumber": random.randint(-10,-1),
-        "kitchenReady" : False,
-        "WOKerReady": False,
-        "currentOrder": 0
-    })
-
 def getCurrentTable():
     return (ref.child("tableNumber").get())
 
@@ -55,20 +37,27 @@ def isKitchenReady():
 def setWOKerReady(state):
     ref.child("WOKerReady").set(state)
 
-def calcPath(grid, start_m, start_n, goal_m, goal_n): 
-    m,n=len(grid),len(grid[0])
-    deque=collections.deque([[(start_m,start_n)]])
-    seen=set()
-    while deque:
-        arr=deque.popleft()
-        i,j=arr[-1]
-        if (i,j)==(goal_m,goal_n):
-            return arr
-        seen.add((i,j))
-        possible=[(x,y) for x,y in [(i+1,j),(i-1,j),(i,j+1),(i,j-1)] if 0<=x<m and 0<=y<n and grid[x][y]==0]
-        for x,y in possible:
-            if (x,y) not in seen:
-                deque.append(arr+[(x,y)])
+# def calcPath(grid, start_m, start_n, goal_m, goal_n): 
+#     m,n=len(grid),len(grid[0])
+#     deque=collections.deque([[(start_m,start_n)]])
+#     seen=set()
+#     while deque:
+#         arr=deque.popleft()
+#         i,j=arr[-1]
+#         if (i,j)==(goal_m,goal_n):
+#             return arr
+#         seen.add((i,j))
+#         possible=[(x,y) for x,y in [(i+1,j),(i-1,j),(i,j+1),(i,j-1)] if 0<=x<m and 0<=y<n and grid[x][y]==0]
+#         for x,y in possible:
+#             if (x,y) not in seen:
+#                 deque.append(arr+[(x,y)])
+
+def calcPath(grid, start_m, start_n, goal_m, goal_n):
+    start = grid.node(start_m, start_n)
+    end = grid.node(goal_m, goal_n)
+    finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+    path, runs = finder.find_path(start, end, grid)
+    return path
 
 def calcMovesDistance(path_arr):    
     arr = path_arr
@@ -181,7 +170,7 @@ x, y = [],[]
 sc = ax.scatter(x,y)
 colorsList = ['w', 'r', 'g']
 cmap = mpl.colors.ListedColormap(colorsList)
-plt.imshow(alleyF, cmap=cmap)
+plt.imshow(grid_raw, cmap=cmap)
 plt.xlim(-2,20)
 plt.ylim(0,25)
 plt.draw()
@@ -195,7 +184,7 @@ print(getCurrentTable())
 headingTableY = 15
 headingTableX = 5
 
-arr = calcPath(alleyF, current_robotY, current_robotX, headingTableY, headingTableX) #y-start, x-start, y-end, x-end
+arr = calcPath(grid_loaded, current_robotY, current_robotX, headingTableY, headingTableX) #y-start, x-start, y-end, x-end
 distArr = []
 headingArr = []
 
