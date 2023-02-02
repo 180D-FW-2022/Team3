@@ -128,10 +128,10 @@ if(Serial.available()>0){
   int toTurn = incomingString.toInt();
   Serial.println(toTurn);
   if(toTurn > 0){
-  moveRobot(toTurn, 2, SPD_linear);
+  moveRobot(toTurn, 1, SPD_linear);
   }else{
     toTurn = -1*toTurn;
-    moveRobot(toTurn, 4, SPD_linear);
+    moveRobot(toTurn, 3, SPD_linear);
     }
   }
 
