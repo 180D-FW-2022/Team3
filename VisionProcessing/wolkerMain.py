@@ -18,6 +18,7 @@ import matplotlib as mpl
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
+from pathfinding.core.heuristic import null
 
 # Import the Firebase service
 import firebase_admin
@@ -71,9 +72,12 @@ def getMap():
 fetched_map = getMap().split(',')
 fetched_map_matrix = np.reshape(fetched_map, (20, 20))
 grid_raw = fetched_map_matrix.astype(int)
-grid_raw[grid_raw > 0] = -1
+grid_display = fetched_map_matrix.astype(int)
+grid_raw[grid_raw > 9] = -1
+grid_raw[grid_raw > 0] = -2
 grid_raw[grid_raw == 0] = 1
-grid_raw[grid_raw == -1] = 0
+grid_raw[grid_raw == -1] = 1
+grid_raw[grid_raw == -2] = 0
 
 print(grid_raw)
 
@@ -119,7 +123,7 @@ x, y = [],[]
 sc = ax.scatter(x,y)
 colorsList = ['w', 'r', 'g']
 cmap = mpl.colors.ListedColormap(colorsList)
-plt.imshow(grid_raw, cmap=cmap)
+plt.imshow(grid_display, cmap=cmap)
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
@@ -217,9 +221,9 @@ def process_april_tags(frame):
 def calcPath(grid, start_x, start_y, goal_x, goal_y):
     start = grid.node(start_x, start_y)
     end = grid.node(goal_x, goal_y)
-    finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+    finder = AStarFinder(diagonal_movement=DiagonalMovement.never,  heuristic=null)
     path, runs = finder.find_path(start, end, grid)
-    print(grid.grid_str(path=path, start=start, end=end))
+   #print(grid.grid_str(path=path, start=start, end=end))
     return path
 
 def calcMovesDistance(path_arr):    
@@ -329,8 +333,8 @@ def calcMovesHeading(path_arr):
 
 
 
-headingTableX = 15
-headingTableY = 10
+headingTableX = 10
+headingTableY = 5
 
 grid_loaded = Grid(matrix=grid_raw)
 arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
