@@ -77,10 +77,12 @@ grid_raw = fetched_map_matrix.astype(int)
 grid_raw[grid_raw > 9] = -1
 grid_raw[grid_raw > 0] = -2
 grid_raw[grid_raw == 0] = 1
-grid_raw[grid_raw == -1] = 1
+grid_raw[grid_raw == -1] = 4
 grid_raw[grid_raw == -2] = 0
 
-grid_raw_copy = grid_raw.copy()
+grid_raw_margined = grid_raw.copy()
+
+to_set_const = 4
 
 populate = 1
 if populate == 1:
@@ -102,7 +104,7 @@ if populate == 1:
                     d3 = grid_raw[row+1][column-1] #down left diag
                     d4 = grid_raw[row+1][column+1] #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == 0 and column > 0 and column<(matrix_size-1)): #top 
                 if(current == 1):
                     left = grid_raw[row][column-1]
@@ -114,7 +116,7 @@ if populate == 1:
                     d3 = grid_raw[row+1][column-1] #down left diag
                     d4 = grid_raw[row+1][column+1] #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == (matrix_size-1) and column > 0 and column<(matrix_size-1)): #bottom
                 if(current == 1):
                     left = grid_raw[row][column-1]
@@ -126,7 +128,7 @@ if populate == 1:
                     d3 = 1 #down left diag
                     d4 = 1 #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row > 0 and row<(matrix_size-1) and column == 0): #left
                 if(current == 1):
                     left = 1
@@ -138,7 +140,7 @@ if populate == 1:
                     d3 = 1 #down left diag
                     d4 = grid_raw[row+1][column+1] #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row > 0 and row<(matrix_size-1) and column==(matrix_size-1)): #right
                 if(current == 1):
                     left = grid_raw[row][column-1]
@@ -150,7 +152,7 @@ if populate == 1:
                     d3 = grid_raw[row+1][column-1] #down left diag
                     d4 = 1 #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == 0 and column == 0): #top left
                 if(current == 1):
                     left = 1
@@ -162,7 +164,7 @@ if populate == 1:
                     d3 = 1 #down left diag
                     d4 = grid_raw[row+1][column+1] #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == (matrix_size-1) and column == 0): #bottom left
                 if(current == 1):
                     left = 1
@@ -174,7 +176,7 @@ if populate == 1:
                     d3 = 1 #down left diag
                     d4 = 1 #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == (matrix_size-1) and column == (matrix_size-1)): #bottom right
                 if(current == 1):
                     left = grid_raw[row][column-1]
@@ -186,7 +188,7 @@ if populate == 1:
                     d3 = 1 #down left diag
                     d4 = 1 #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
             if(row == 0 and column == (matrix_size-1)): #top right
                 if(current == 1):
                     left = grid_raw[row][column-1]
@@ -198,7 +200,7 @@ if populate == 1:
                     d3 = grid_raw[row+1][column-1] #down left diag
                     d4 = 1 #down right diag
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_copy[row][column] = 0
+                        grid_raw_margined[row][column] = to_set_const
 
 #arduino connect pySerial
 if(test_mode == 0):
@@ -240,9 +242,9 @@ plt.ion()
 fig, ax = plt.subplots()
 x, y = [],[]
 sc = ax.scatter(x,y)
-colorsList = ['g', 'r', 'w']
+colorsList = ['g', 'w', 'grey' ,'grey', 'grey']
 cmap = mpl.colors.ListedColormap(colorsList)
-plt.imshow(grid_raw_copy, cmap=cmap)
+plt.imshow(grid_raw_margined, cmap=cmap)
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
@@ -452,10 +454,10 @@ def calcMovesHeading(path_arr):
 
 
 
-headingTableX = 10
+headingTableX = 9
 headingTableY = 5
 
-grid_loaded = Grid(matrix=grid_raw)
+grid_loaded = Grid(matrix=grid_raw_margined)
 arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
 distArr = []
 headingArr = []
