@@ -7,7 +7,7 @@ sampleItemOrder=[("chicken sandwich", 4), ("milkshake", 5)]
 tables = []
 tn = []
 
-testNum = 8
+testNum = 10
 testNums = [1,2,3,4,5]
 
 # for i in range(1,testNum+1):
