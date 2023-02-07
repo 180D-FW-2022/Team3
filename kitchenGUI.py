@@ -10,17 +10,20 @@ from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.screen import Screen
 from collections import deque
+import firebase
+import asyncio
 
-import kitchenNode
+
+# import kitchenNode
 
 class KitchenGUI(MDApp):
-    mainKitchenNode = kitchenNode.KitchenNode()
+    # mainKitchenNode = kitchenNode.KitchenNode()
     orderList = []
     readyTable = -99
-    tableNoExists = True
-    latestOrder = []
-    prevNotReadyOrderTables = []
-    orderNumbers = []
+    # tableNoExists = True
+    # latestOrder = []
+    # prevNotReadyOrderTables = []
+    orderNumbers = deque()
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -36,7 +39,7 @@ class KitchenGUI(MDApp):
             column_data=[
                 ("Order#", dp(25)),
                 ("Table No.", dp(25)),
-                ("Item", dp(50)),
+                ("Items", dp(50)),
                 ("Qty", dp(25) ),
             ],
             rows_num = 15,
@@ -50,10 +53,10 @@ class KitchenGUI(MDApp):
         return screen
     
     def on_start(self):
-        self.mainKitchenNode.run()
+        # self.mainKitchenNode.run()
         # Clock.schedule_interval(self.checkForOrder, 1/4.)
 
-        kitchenNode.firebase.ref.child("sentOrders").listen(self.addRows)
+        firebase.ref.child("sentOrders").listen(self.addRows)
 
 
         # Clock.schedule_interval(self.mainKitchenNode.orderSend, 1/4)
@@ -79,24 +82,44 @@ class KitchenGUI(MDApp):
             # print(latestItem)
             newTableNumber = latestItem["tableNumber"]
             newOrderNumber = latestItem["orderNumber"]
+            itemString = "\n"
+            qtyString = "\n"
             for item in latestItem["items"].items():
+                itemString += item[0]
+                # print(itemString)
+                itemString += '\n'
+                qtyString += str(item[1])
+                qtyString += '\n'
                 # print(newOrderNumber, item)
-                self.data_tables.add_row(list((newOrderNumber, newTableNumber, item[0], item[1])))
-                self.orderNumbers.append(newOrderNumber)
+                # self.data_tables.add_row(list((newOrderNumber, newTableNumber, item[0], item[1])))
+            self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString)))
+            self.orderNumbers.append(newOrderNumber)
+            self.orderList.append(i)
             pass
-        # print(self.orderNumbers)
+    
+    async def check(self, i):
+        firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
+
 
     def on_check_press(self, instance_table, instance_row):
         # self.servingTable = int(self.data_tables.row_data[0][0])
         # print(self.servingTable)
+        # print(self.orderList)
+        # print("---")
+        # print(type(self.orderList[0]))
+        # print("---")
+        
         prevNotReadyOrderTables = []
         for i in self.data_tables.row_data:
             if i[0] not in prevNotReadyOrderTables:
                 prevNotReadyOrderTables.append(i[0])
         
         rowCount = 0
-        print(instance_table.row_data)
-        searchRow = [int(instance_row[0]), int(instance_row[1]), instance_row[2], int(instance_row[3])]
+        # print(instance_table.row_data)
+        searchRow = [int(instance_row[0]), int(instance_row[1]), instance_row[2], (instance_row[3])]
+        orderNumber = instance_row[0]
+        # print(self.orderList["order" + str(orderNumber)])
+        # searchRow = instance_row
         # print("---")
         # print(searchRow)
 
@@ -108,8 +131,20 @@ class KitchenGUI(MDApp):
         instance_table.remove_row(searchRow) 
         
         self.orderNumbers.remove(int(instance_row[0]))        
-        print(self.orderNumbers)
 
+        # print(orderNumber)
+        # print("---")
+        count = 0
+        for i in self.orderList:
+            if str(orderNumber) == i[0][5:]:
+                print("found:", count)
+                self.orderList.pop(count)
+                print(self.orderList)
+                # firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
+                asyncio.run(self.check(i))
+                break
+            count +=1
+        # print("---")
         # print(self.orderNumbers.remove)
         # newNotReadyOrderTables = []
         # for i in instance_table.row_data:
