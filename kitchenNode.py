@@ -16,95 +16,96 @@ class KitchenNode:
   def __init__(self):
     pass
 
-  def __on_connect(self, client, userdata, flags, rc):
-      print("Connection initialized. Returned result: " + str(rc))
-      client.subscribe(mqttTopics.orTakTopic, qos=1) 
-      client.subscribe(mqttTopics.WOKerReadyTopic, qos=1)
-      pass
+  # def __on_connect(self, client, userdata, flags, rc):
+  #     print("Connection initialized. Returned result: " + str(rc))
+  #     client.subscribe(mqttTopics.orTakTopic, qos=1) 
+  #     client.subscribe(mqttTopics.WOKerReadyTopic, qos=1)
+  #     pass
       
-  def __on_disconnect(self, client, userdata, rc): 
-    if rc != 0: 
-      print('Unexpected Disconnect')
-    else:
-      print('Expected Disconnect')
+  # def __on_disconnect(self, client, userdata, rc): 
+  #   if rc != 0: 
+  #     print('Unexpected Disconnect')
+  #   else:
+  #     print('Expected Disconnect')
 
 
-  def __orderReceiveFirebase(self, event):
-    # print(event.event_type)  # can be 'put' or 'patch'
-    # print(event.path)  # relative to the reference, it seems
-    # print(event.data)  # new data at /reference/event.path. None if deleted
-    # print(event.data)
-    # print("---")
-    # print(event.data)
-    if (event.data == None):
-      return
-    if (len(event.data) > 0):
-      for i in event.data.items():
-        self.orderList.append(i[1])
-        # print(i[1])
-    # self.orderList.append(event.data)
-    # print("endOrderReceive")
+  # def __orderReceiveFirebase(self, event):
+  #   # print(event.event_type)  # can be 'put' or 'patch'
+  #   # print(event.path)  # relative to the reference, it seems
+  #   # print(event.data)  # new data at /reference/event.path. None if deleted
+  #   # print(event.data)
+  #   # print("---")
+  #   # print(event.data)
+  #   if (event.data == None):
+  #     return
+  #   if (len(event.data) > 0):
+  #     for i in event.data.items():
+  #       self.orderList.append(i[1])
+  #       # print(i[1])
+  #   print(self.orderList)
+  #   # self.orderList.append(event.data)
+  #   # print("endOrderReceive")
 
-  def __orderReceive(self, client, userdata, message): 
-    rawString = message.payload
-    # format: TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
-    splitString = rawString.decode() #convert bytes into string
-    splitString = splitString.split(";") #split string by commas
-    tableNumber = splitString[0][3:]
-    itemsArray = []
-    for i in splitString[1].split(":")[1].split(","):
-      itemName = i.split("-")[0]
-      qnty = i.split("-")[1]
-      itemsArray.append((itemName, qnty))
-    total = splitString[2][4:] 
-    cost = splitString[3][5:]
-    specialRequests = splitString[4][3:]
-    completeOrder = {
-      "tableNumber": tableNumber,
-      "itemsArray": itemsArray,
-      "totalItems": total,
-      "cost": cost,
-      "specialRequests": specialRequests
-    }
-    self.orderList.append(completeOrder)
+  # def __orderReceive(self, client, userdata, message): 
+  #   rawString = message.payload
+  #   # format: TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
+  #   splitString = rawString.decode() #convert bytes into string
+  #   splitString = splitString.split(";") #split string by commas
+  #   tableNumber = splitString[0][3:]
+  #   itemsArray = []
+  #   for i in splitString[1].split(":")[1].split(","):
+  #     itemName = i.split("-")[0]
+  #     qnty = i.split("-")[1]
+  #     itemsArray.append((itemName, qnty))
+  #   total = splitString[2][4:] 
+  #   cost = splitString[3][5:]
+  #   specialRequests = splitString[4][3:]
+  #   completeOrder = {
+  #     "tableNumber": tableNumber,
+  #     "itemsArray": itemsArray,
+  #     "totalItems": total,
+  #     "cost": cost,
+  #     "specialRequests": specialRequests
+  #   }
+  #   self.orderList.append(completeOrder)
     # print("---")
     # for order in self.orderList:
         # print(order)
     # print("Order queue length: ", len(self.orderList))
 
-  def orderComplete(self):
-    self.orderPending = True
-    print("Table", self.readyTables[0], "pending")
+  # def orderComplete(self):
+  #   self.orderPending = True
+  #   print("Table", self.readyTables[0], "pending")
 
       
-  def __WOKerReadyState(self, client, userdata, message):
-      self.WOKerready = message
+  # def __WOKerReadyState(self, client, userdata, message):
+  #     self.WOKerready = message
 
-  def orderSend(self, event=None):
-    if self.orderPending == True and self.WOKerReady == True and len(self.orderList) != 0:
-      self.client.publish(mqttTopics.WOKerTableNumberTopic, self.readyTables[0], qos=1)
-      self.client.publish(mqttTopics.WOKerGoTopic, True, qos=1)
-      print("WOKer going to table", self.readyTables[0])
-      self.readyTables.popleft()
-      self.orderList.popleft()
-      if len(self.readyTables) == 0:
-        self.orderPending = False
-      self.WOKerReady = False
-      self.client.publish(mqttTopics.WOKerGoTopic, False, qos=1)
-    pass
+  # def orderSend(self, event=None):
+  #   if self.orderPending == True and self.WOKerReady == True and len(self.orderList) != 0:
+  #     self.client.publish(mqttTopics.WOKerTableNumberTopic, self.readyTables[0], qos=1)
+  #     self.client.publish(mqttTopics.WOKerGoTopic, True, qos=1)
+  #     print("WOKer going to table", self.readyTables[0])
+  #     self.readyTables.popleft()
+  #     self.orderList.popleft()
+  #     if len(self.readyTables) == 0:
+  #       self.orderPending = False
+  #     self.WOKerReady = False
+  #     self.client.publish(mqttTopics.WOKerGoTopic, False, qos=1)
+  #   pass
 
   def __WOKerTest(self, event=None):
     print("WOKer set to ready!")
     self.WOKerReady = True
   
 
-  def run(self):
-    # self.client.on_connect = self.__on_connect
-    # self.client.on_disconnect = self.__on_disconnect
-    # self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
-    # self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
-    firebase.ref.child("sentOrders").listen(self.__orderReceiveFirebase)
-
+  # def run(self):
+  #   # self.client.on_connect = self.__on_connect
+  #   # self.client.on_disconnect = self.__on_disconnect
+  #   # self.client.message_callback_add(mqttTopics.orTakTopic, self.__orderReceive)
+  #   # self.client.message_callback_add(mqttTopics.WOKerReadyTopic, self.__WOKerReadyState)
+  #   # firebase.ref.child("sentOrders").listen(self.__orderReceiveFirebase)
+  #   pass
     # self.client.connect_async(mqttTopics.broker)
 
     # self.client.loop_start()
