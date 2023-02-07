@@ -31,7 +31,7 @@ test_mode = 1
 test_tag_id = 0
 distanceScale = 0.75
 
-moveTimeoutConst = 15 #seconds
+moveTimeoutConst = 2 #seconds
 
 cam_id = 0 #"/dev/video0"
 scale = 1.0
@@ -81,9 +81,9 @@ grid_raw[grid_raw == -1] = 4
 grid_raw[grid_raw == -2] = 0
 
 grid_raw_margined = grid_raw.copy()
+grid_loaded = Grid(matrix=grid_raw_margined)
 
-to_set_const = 4
-
+to_set_const = 4 #weight of margin entries
 populate = 1
 if populate == 1:
     for row in range(matrix_size): #populate margins of 0.5m or 1 block around items for path planning. 
@@ -253,15 +253,17 @@ plt.draw()
 
 
 
-
-
-
 #functions
 def rescale_frame(frame, percent=75):
     width = int(frame.shape[1] * percent/ 100)
     height = int(frame.shape[0] * percent/ 100)
     dim = (width, height)
     return cv.resize(frame, dim, interpolation =cv.INTER_AREA)
+
+
+def halt_movment():
+    ser.write(str.encode('x'))
+    ser.write(str.encode('x'))
 
 def send_distance(distance, direction = 'b'):
     if(test_mode == 0):  
@@ -278,6 +280,7 @@ def send_distance(distance, direction = 'b'):
             ser.write(b'\x00') 
             ser.write(b'\x00') 
             ser.write(b'\x00') 
+
         # movementDone = True 
             time.sleep(0.1)
 
@@ -448,44 +451,20 @@ def calcMovesHeading(path_arr):
     return arr_angle_clean
       
 
-
-
-
-
-
-
 headingTableX = 9
 headingTableY = 5
+current_step = 0
 
-grid_loaded = Grid(matrix=grid_raw_margined)
+
 arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
 distArr = []
 headingArr = []
 
 distances = calcMovesDistance(arr)
-print("distance")
-print(distances)
-print()
+
 angles = calcMovesHeading(arr)
-print("angles")
-print(angles)
-print()
-print()
 print("STARTING TEST SEQUENCE")
 print()
-
-for i in range(len(angles)): 
-    if(angles[i] == 0):
-        print("moving "+str(distances[i])+"m")
-        print()
-    else:
-        print("rotating "+str(angles[i])+"°")
-        print()
-        toSubtract = angles[i]
-        for ind in range(len(angles)):
-            angles[ind] = angles[ind]-toSubtract
-        print("moving "+str(distances[i])+"m")
-        print()
     
 #display
 x.clear()
@@ -497,46 +476,56 @@ for i in arr:
 sc.set_offsets(np.c_[x,y])
 sc.axes.invert_yaxis()
 fig.canvas.draw_idle()
-#print(arr)
 
-plt.waitforbuttonpress()
+start = time.time()
+while True:
+    # Capture frame-by-frame
+    try:
+        ret, frame = cap.read()
+        angle, distance = process_april_tags(frame)        
 
 
-# start = time.time()
-# while True:
-#     # Capture frame-by-frame
-#     try:
-#         ret, frame = cap.read()
-#         angle, distance = process_april_tags(frame)
-
-#         if(movementDone == True):
-#             #Code begin
-#             movementDone = False
-#             moveActionTimestamp = time.time()
-#             print("[movement] Start")
-#             #code end
-#             angleStore = 0
-#             distanceStore = 0
+        if(movementDone == True):
+            if(current_step < len(angles)):
+                i=current_step
+                if(angles[i] == 0):
+                    print("moving "+str(distances[i])+"m")
+                    print()
+                    current_step += 1
+                else:
+                    print("rotating "+str(angles[i])+"°")
+                    print()
+                    toSubtract = angles[i]
+                    for ind in range(len(angles)):
+                        angles[ind] = angles[ind]-toSubtract
+            else:
+                current_step = 0
+            #Code begin
+            movementDone = False
+            moveActionTimestamp = time.time()
+            print("[movement] Start")
+            #code end
             
             
         
-#         #check if movmement is done - arduino sends 0x61 on move done. 
-#         readS = 0x00
-#         if(test_mode == 0):
-#             readS = ser.read(1)
-#         if((b'\x61' == readS and movementDone == False) or time.time()-moveActionTimestamp >= moveTimeoutConst):
-#                 print("[movement] Done")
-#                 print()
-#                 movementDone = True 
-#                 time.sleep(0.1)
-#         cv.imshow('frame', frame)
-#         if cv.waitKey(1) == ord('q'):
-#             break
-#     except Exception as e: 
-#         print(e)
-#         break
-# # When everything done, release the capture
-# cap.release()
-# cv.destroyAllWindows()
-# if(test_mode == 0):     
-#     ser.close()             # close port
+        #check if movmement is done - arduino sends 0x61 on move done. 
+        readS = 0x00
+        if(test_mode == 0):
+            readS = ser.read(1)
+        if((b'\x61' == readS and movementDone == False) or time.time()-moveActionTimestamp >= moveTimeoutConst):
+                print("[movement] Done")
+                print()
+                movementDone = True 
+                time.sleep(0.1)
+        cv.imshow('frame', frame)
+        if cv.waitKey(1) == ord('q'):
+            break
+    except Exception as e: 
+        print(e)
+        break
+# When everything done, release the capture
+cap.release()
+cv.destroyAllWindows()
+plt.waitforbuttonpress()
+if(test_mode == 0):     
+    ser.close()             # close port

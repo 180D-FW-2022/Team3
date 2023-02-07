@@ -302,6 +302,12 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         for(int i = 0; i < (steps-200); i++){
         stepMotor(2, spd);
         stepMotor(4, spd);
+        if(Serial.available() > 0){
+          d = Serial.read();
+          if(d == 'x'){
+            break;
+          }
+        }
         }
         for(int i = 0; i < 20; i++){
         stepMotor(2, SPD_3);
