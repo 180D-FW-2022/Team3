@@ -27,15 +27,16 @@ def getCurrentTable():
 def isKitchenReady():
     return (ref.child("kitchenReady").get())
 
-def setWOKerReady(state):
-    ref.child("WOKerReady").set(state)
+#set WOKer to ready (True)
+def WOKerReadyTrue():
+    ref.child("WOKerReady").set(True)
+
+#set robotReceived to recieved (True)
+def robotReceivedTrue():
+    ref.child("robotReceived").set(True)
 
 def sendMap(map):
     ref.child("map").set(map)
 
 def getMap():
     return ref.child("map").get()
-
-# print(ref.child("tableNumber").get())
-# Retrieve services via the auth package...
-# auth.create_custom_token(...)
