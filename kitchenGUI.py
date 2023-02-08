@@ -99,16 +99,16 @@ class KitchenGUI(MDApp):
             # print(latestItem)
             newTableNumber = latestItem["tableNumber"]
             newOrderNumber = latestItem["orderNumber"]
-            itemString = "\n"
-            qtyString = "\n"
+            specialRequest = latestItem["specialRequests"]
+            # itemString = "\n"
+            # qtyString = "\n"
             for item in latestItem["items"].items():
-                itemString += item[0]
-                itemString += '\n'
-                qtyString += str(item[1])
-                qtyString += '\n'
-            self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString)))
-            self.orderNumbers.append(newOrderNumber)
-            itemAppend = {"order" + str(newOrderNumber): latestItem}
+                itemString = item[0]
+                # itemString += '\n'
+                qtyString = str(item[1])
+                # qtyString += '\n'
+                self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
+                self.orderNumbers.append(newOrderNumber)
             self.orderList.append( (
                 "order" + str(newOrderNumber), latestItem
              ) )
@@ -118,17 +118,18 @@ class KitchenGUI(MDApp):
                 newTableNumber = latestItem["tableNumber"]
                 newOrderNumber = latestItem["orderNumber"]
                 specialRequest = latestItem["specialRequests"]
-                itemString = "\n\n\n\n"
-                qtyString = "\n"
+                # itemString = "\n\n\n\n"
+                # qtyString = "\n"
                 for item in latestItem["items"].items():
-                    itemString += item[0]
-                    itemString += '\n'
-                    qtyString += str(item[1])
-                    qtyString += '\n'
-                itemString += '\n\n\n'
-                self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
-                self.orderNumbers.append(newOrderNumber)
+                    itemString = item[0]
+                    # itemString += '\n'
+                    qtyString = str(item[1])
+                    # qtyString += '\n'
+                    # itemString += '\n\n\n'
+                    self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
+                    self.orderNumbers.append(newOrderNumber)
                 self.orderList.append(i)
+                print(self.orderNumbers)
                 pass
 
     def setNewTable(self, event):
@@ -208,16 +209,18 @@ class KitchenGUI(MDApp):
         instance_table.remove_row(instance_table.row_data[index])
         
         print(self.orderList)
-        count = 0
-        for i in self.orderList:
-            if str(orderNumber) == i[0][5:]:
-                # print("found:", count)
-                self.orderList.pop(count)
-                # print(self.orderList)
-                # firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
-                asyncio.run(self.check(i))
-                break
-            count +=1
+        self.orderNumbers.remove(orderNumber)
+        if orderNumber not in self.orderNumbers:
+            count = 0
+            for i in self.orderList:
+                if str(orderNumber) == i[0][5:]:
+                    # print("found:", count)
+                    self.orderList.pop(count)
+                    # print(self.orderList)
+                    # firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
+                    asyncio.run(self.check(i))
+                    break
+                count +=1
 
 if __name__ == "__main__":
     GUI = KitchenGUI()
