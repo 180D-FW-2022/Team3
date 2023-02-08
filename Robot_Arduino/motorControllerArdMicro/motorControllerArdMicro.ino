@@ -42,7 +42,7 @@ double rot_stepDeg = 16; //steps per degree
 #define SPD_2 1500
 #define SPD_3 1200
 #define SPD_linear 800
-#define SPD_rotate 600
+#define SPD_rotate 400
 
 
 
