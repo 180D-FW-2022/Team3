@@ -35,16 +35,18 @@ class KitchenGUI(MDApp):
         self.theme_cls.primary_palette = "Green"
         screen = Screen()
         self.row_data = []
+        columnWidth = 50
         self.data_tables = MDDataTable(
             size_hint = (0.9, 0.9),
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             use_pagination=False,
             check=False,
             column_data=[
-                ("Order#", dp(25)),
-                ("Table No.", dp(25)),
-                ("Items", dp(50)),
-                ("Qty", dp(25) ),
+                ("Order#", dp(columnWidth)),
+                ("Table No.", dp(columnWidth)),
+                ("Items", dp(columnWidth)),
+                ("Qty", dp(columnWidth) ),
+                ("Special Requests", dp(columnWidth))
             ],
             rows_num = 100,
             row_data = self.row_data,    
@@ -115,6 +117,7 @@ class KitchenGUI(MDApp):
                 latestItem = i[1]
                 newTableNumber = latestItem["tableNumber"]
                 newOrderNumber = latestItem["orderNumber"]
+                specialRequest = latestItem["specialRequests"]
                 itemString = "\n"
                 qtyString = "\n"
                 for item in latestItem["items"].items():
@@ -122,14 +125,10 @@ class KitchenGUI(MDApp):
                     itemString += '\n'
                     qtyString += str(item[1])
                     qtyString += '\n'
-                self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString)))
+                self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
                 self.orderNumbers.append(newOrderNumber)
                 self.orderList.append(i)
                 pass
-    
-    async def check(self, i):
-        firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
-        firebase.ref.child("sentOrders/order" + str(i[0][5:])).delete()
 
     def setNewTable(self, event):
         if firebase.ref.child("readyOrders").get() == None:
@@ -153,8 +152,15 @@ class KitchenGUI(MDApp):
                 return
             # print("WOKER")
             firebase.ref.child("tableNumber").set(firebase.ref.child("newTableNumber").get())
-            firstOrder = list(firebase.ref.child("readyOrders").get().keys())[0]
-            # print(firstOrder)
+            orders = []
+            for i in firebase.ref.child("readyOrders").get().keys():
+                # print(int(i[5:]))
+                orders.append(int(i[5:]))
+            orders.sort()
+            print(orders)
+            firstOrder = "order" + str(orders[0])
+            # firstOrder = list(firebase.ref.child("readyOrders").get().keys())[0]
+            print(firstOrder)
             firebase.ref.child("pastOrders/" + firstOrder).set(firebase.ref.child("readyOrders/" + firstOrder).get())
             firebase.ref.child("readyOrders/" + firstOrder).delete()
             firebase.ref.child("newTableReady").set(True)
@@ -179,6 +185,10 @@ class KitchenGUI(MDApp):
         print("exiting...")
         self.listener.close()
 
+    async def check(self, i):
+        firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
+        firebase.ref.child("sentOrders/order" + str(i[0][5:])).delete()
+
     def on_row_press(self, instance_table, instance_row):
         rowCount = 0
         index = int(instance_row.index/4)
@@ -192,7 +202,8 @@ class KitchenGUI(MDApp):
         # print(orderNumber)
 
         instance_table.remove_row(instance_table.row_data[index])
-
+        
+        print(self.orderList)
         count = 0
         for i in self.orderList:
             if str(orderNumber) == i[0][5:]:
