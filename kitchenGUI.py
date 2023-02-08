@@ -184,6 +184,9 @@ class KitchenGUI(MDApp):
     def on_request_close(self, *args):
         print("exiting...")
         self.listener.close()
+        self.readyOrdersListener.close()
+        self.WOKerReadyListener.close()
+        self.robotReceievedListener.close()
 
     async def check(self, i):
         firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
