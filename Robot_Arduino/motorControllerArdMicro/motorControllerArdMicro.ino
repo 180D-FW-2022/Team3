@@ -1,5 +1,13 @@
 //********** INCLUDES *************
 #include <TimerOne.h>
+#include <U8g2lib.h>
+
+#ifdef U8X8_HAVE_HW_SPI
+#include <SPI.h>
+#endif
+#ifdef U8X8_HAVE_HW_I2C
+#include <Wire.h>
+#endif
 //END
 
 //#define DEBUG_SER
@@ -27,7 +35,7 @@ double movLin_mmStep = 0.3638996139; //mm per step
 double movLin_stepMM = 2.7480106101; //steps per mm
 double rot_stepDeg = 16; //steps per degree
 
-
+#define batReadTime 1000
 #define COMM_TIMEOUT 100
 //COLORS
 //ENABLE PIN: RED   /  TURQUISE / GREY
@@ -69,7 +77,14 @@ double rot_stepDeg = 16; //steps per degree
 //******* GLOBAL VARIABLES **********
 int motorStepsArr[4] = {0,0,0,0}; //number of steps left for each motor.
 
+unsigned long last_volt_time = 0;
+
+U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
+
 void setup() {
+  setMotorTorqueAll(0);
+  analogReference(DEFAULT);
+  u8g2.begin();
   portSetup();
   Timer1.initialize(10000); //every 10ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
@@ -79,6 +94,11 @@ void setup() {
 }
 
 void loop() {
+  if(millis()-last_volt_time > (unsigned long)batReadTime){
+    last_volt_time = millis();
+    readAndPrintVoltage();
+  }
+
   String command = checkForSerialAngleDist();
   if(command != "-1"){
     setMotorTorqueAll(1);
@@ -137,6 +157,15 @@ if(Serial.available()>0){
 
 #endif
   
+}
+
+void readAndPrintVoltage(void){
+ float bat_volt = (analogRead(A3)/1023.0)*(20.0);
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.drawStr(0,10, "Total Voltage:");
+  u8g2.drawStr(0,25, (String(bat_volt, 3)+"V").c_str());
+  u8g2.sendBuffer();
 }
 
 void interruptHandler(void){ 
