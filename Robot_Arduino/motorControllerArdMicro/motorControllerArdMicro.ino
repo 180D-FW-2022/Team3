@@ -2,7 +2,7 @@
 #include <TimerOne.h>
 //END
 
-#define DEBUG_SER
+//#define DEBUG_SER
 //********* PIN DEFINITIONS ************
 
 #define SET 1
@@ -36,13 +36,13 @@ double rot_stepDeg = 16; //steps per degree
 
 //ENABLE : HIGH DISABLE
 //DIR    : LOW CLOCKWISE
-#define stepMargin 200
+#define stepMargin 200L
 
 #define SPD_1 2000
 #define SPD_2 1500
 #define SPD_3 1200
 #define SPD_linear 800
-#define SPD_rotate 400
+#define SPD_rotate 600
 
 
 
@@ -266,8 +266,7 @@ void rotateRobot(double deg, bool cw, int spd){
 //dirColor : RBGW, Red Black Green White arm direciton.
 // R = 1, B = 2 ....
 void moveRobot(double distanceMM, int dirColor, int spd){ 
-  int steps = int(movLin_stepMM * distanceMM);
-  Serial.println(steps);
+  long int steps = long(movLin_stepMM * double(distanceMM));
   if(dirColor == 1 || dirColor == 2){ //Red or Black
     setMotorDir(1, clockwise); //for black dir
     setMotorDir(2, counterCW); //for red dir
@@ -299,15 +298,9 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(2, SPD_3);
         stepMotor(4, SPD_3);
         }
-        for(int i = 0; i < (steps-200); i++){
+        for(long int j = 0L; j < (steps-200L); j++){
         stepMotor(2, spd);
         stepMotor(4, spd);
-        if(Serial.available() > 0){
-          d = Serial.read();
-          if(d == 'x'){
-            break;
-          }
-        }
         }
         for(int i = 0; i < 20; i++){
         stepMotor(2, SPD_3);
@@ -341,7 +334,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(1, SPD_3);
         stepMotor(3, SPD_3);
         }
-        for(int i = 0; i < steps-(200); i++){
+        for(long j = 0L; j < steps-(200L); j++){
         stepMotor(1, spd);
         stepMotor(3, spd);
         }
@@ -369,8 +362,8 @@ String checkForSerialAngleDist(){
   int timeout = 0;
     if (Serial.available()) {
     char c = Serial.read();
-    char d = 0;
-     char e = 0;
+    byte d = 0;
+    byte e = 0;
     if(c == 'd'){ //degreeMove
       if(Serial.available() > 0){
     d = Serial.read();
@@ -437,7 +430,7 @@ String checkForSerialAngleDist(){
      Serial.read();  
      delay(1);
     } 
-     int r = (d << 8) | e;
+     int r = ( d<<8 ) | e;
      Serial.write(d);
      Serial.write(e);
      return (String(c)+String(r));
@@ -454,7 +447,6 @@ String checkForSerialAngleDist(){
 void sendDone(){
   Serial.write('a');
   delay(10);
-  Serial.write('a');
   }
 
 int waitForSerialAngle_Blocking(){

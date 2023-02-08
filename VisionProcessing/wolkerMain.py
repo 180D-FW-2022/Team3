@@ -26,12 +26,12 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 
-test_mode = 1
+test_mode = 0
 #global consts
 test_tag_id = 0
 distanceScale = 0.75
 
-moveTimeoutConst = 2 #seconds
+moveTimeoutConst = 20 #seconds
 
 cam_id = 0 #"/dev/video0"
 scale = 1.0
@@ -44,8 +44,8 @@ stepCounter = 0
 
 
 current_robotDir = 0 #90, 180, 270.
-current_robotX = 0
-current_robotY = 0
+current_robotX = 1
+current_robotY = 1
 
 
 cred = credentials.Certificate("firebase_key.json")
@@ -73,6 +73,32 @@ matrix_size = 20
 fetched_map = getMap().split(',')
 fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size))
 grid_raw = fetched_map_matrix.astype(int)
+#print(fetched_map_matrix)
+grid_raw = np.array([
+            [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 10, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
+            ]).astype(int)
+
+print(grid_raw)
+print((grid_raw).shape)
 #grid_display = fetched_map_matrix.astype(int)
 grid_raw[grid_raw > 9] = -1
 grid_raw[grid_raw > 0] = -2
@@ -248,7 +274,6 @@ plt.imshow(grid_raw_margined, cmap=cmap)
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
-
 #end
 
 
@@ -265,24 +290,25 @@ def halt_movment():
     ser.write(str.encode('x'))
     ser.write(str.encode('x'))
 
-def send_distance(distance, direction = 'b'):
+def send_distance(distance, direction = 'r'):
     if(test_mode == 0):  
         distance_send = int(abs(distance))
         print("[distance]: move: "+ str(distance_send))
-        #bytes_val = distance_send.to_bytes(2, 'big', signed=True)
+       # bytes_val = distance_send.to_bytes(2, 'big', signed=False)
         bytes_data = struct.pack('>h', distance_send)
-        print(bytes_data)
-        ser.write(str.encode('b'))
+        
+        ser.write(str.encode(direction))
         ser.write(bytes_data)
-        if(bytes_data == ser.read(2)):
-            print("[distance]: received")
-        else:
-            ser.write(b'\x00') 
-            ser.write(b'\x00') 
-            ser.write(b'\x00') 
+        # if((upper_byte+lower_byte) == ser.read(2)):
+        #     print("[distance]: received")
+        # else:
+        #     # ser.write(b'\x00') 
+        #     # ser.write(b'\x00') 
+        #     # ser.write(b'\x00') 
 
-        # movementDone = True 
-            time.sleep(0.1)
+        # # movementDone = True 
+        #     time.sleep(0.1)
+        time.sleep(0.1)
 
 def send_angle(angle):
     if(test_mode == 0):  
@@ -293,14 +319,15 @@ def send_angle(angle):
         print(bytes_data)
         ser.write(str.encode('d'))
         ser.write(bytes_data)
-        if(bytes_data == ser.read(2)):
-            print("[ angle  ]: received")
-        else:
-            ser.write(b'\x00') 
-            ser.write(b'\x00') 
-            ser.write(b'\x00') 
-        # movementDone = True
-            time.sleep(0.1)
+        # if(bytes_data == ser.read(2)):
+        #     print("[ angle  ]: received")
+        # else:
+        #     # ser.write(b'\x00') 
+        #     # ser.write(b'\x00') 
+        #     # ser.write(b'\x00') 
+        # # movementDone = True
+        #     time.sleep(0.1)
+        time.sleep(0.1)
 
 def process_april_tags(frame):
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -364,13 +391,13 @@ def calcMovesDistance(path_arr):
             arr_direction_x.append(x_dir)
             angle = 0
             if(y_dir == 1):
-                angle = 180
-            elif(y_dir == -1):
                 angle = 0
+            elif(y_dir == -1):
+                angle = 180
             elif(x_dir == 1):
-                angle = 90
+                angle = -90
             elif(x_dir == -1):
-                angle = 270
+                angle = 90
             arr_angle.append(angle)
         cnt+=1
 
@@ -414,13 +441,13 @@ def calcMovesHeading(path_arr):
             arr_direction_x.append(x_dir)
             angle = 0
             if(y_dir == 1):
-                angle = 180
-            elif(y_dir == -1):
                 angle = 0
+            elif(y_dir == -1):
+                angle = 180
             elif(x_dir == 1):
-                angle = 90
+                angle = -90
             elif(x_dir == -1):
-                angle = 270
+                angle = 90
             arr_angle.append(angle)
         cnt+=1
 
@@ -451,8 +478,8 @@ def calcMovesHeading(path_arr):
     return arr_angle_clean
       
 
-headingTableX = 9
-headingTableY = 5
+headingTableX = 2
+headingTableY = 6
 current_step = 0
 
 
@@ -490,16 +517,18 @@ while True:
                 i=current_step
                 if(angles[i] == 0):
                     print("moving "+str(distances[i])+"m")
+                    send_distance(distances[i]*100)
                     print()
                     current_step += 1
                 else:
                     print("rotating "+str(angles[i])+"°")
+                    send_angle(angles[i])
                     print()
                     toSubtract = angles[i]
                     for ind in range(len(angles)):
-                        angles[ind] = angles[ind]-toSubtract
+                        angles[ind] = (angles[ind]-toSubtract)
             else:
-                current_step = 0
+                current_step = 100
             #Code begin
             movementDone = False
             moveActionTimestamp = time.time()
@@ -512,6 +541,7 @@ while True:
         readS = 0x00
         if(test_mode == 0):
             readS = ser.read(1)
+            print(readS)
         if((b'\x61' == readS and movementDone == False) or time.time()-moveActionTimestamp >= moveTimeoutConst):
                 print("[movement] Done")
                 print()
