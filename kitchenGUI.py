@@ -118,13 +118,14 @@ class KitchenGUI(MDApp):
                 newTableNumber = latestItem["tableNumber"]
                 newOrderNumber = latestItem["orderNumber"]
                 specialRequest = latestItem["specialRequests"]
-                itemString = "\n"
+                itemString = "\n\n\n\n"
                 qtyString = "\n"
                 for item in latestItem["items"].items():
                     itemString += item[0]
                     itemString += '\n'
                     qtyString += str(item[1])
                     qtyString += '\n'
+                itemString += '\n\n\n'
                 self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
                 self.orderNumbers.append(newOrderNumber)
                 self.orderList.append(i)
@@ -194,7 +195,7 @@ class KitchenGUI(MDApp):
 
     def on_row_press(self, instance_table, instance_row):
         rowCount = 0
-        index = int(instance_row.index/4)
+        index = int(instance_row.index/5)
         # print(index)
         if instance_row.ids.check.state == 'normal':
             instance_row.ids.check.state = 'down'
