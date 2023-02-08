@@ -1,3 +1,6 @@
+import os, sys
+from kivy.resources import resource_add_path, resource_find
+
 from selectors import EVENT_WRITE
 from kivy.metrics import dp
 from kivy.uix.button import Button
@@ -223,5 +226,11 @@ class KitchenGUI(MDApp):
                 count +=1
 
 if __name__ == "__main__":
-    GUI = KitchenGUI()
-    GUI.run()
+    try:
+        if hasattr(sys, '_MEIPASS'):
+            resource_add_path(os.path.join(sys._MEIPASS))
+        GUI = KitchenGUI()
+        GUI.run()
+    except Exception as e:
+        print(e)
+        input("Press enter.")
