@@ -26,12 +26,12 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 
-test_mode = 0
+test_mode = 1
 #global consts
 test_tag_id = 0
 distanceScale = 0.75
 
-moveTimeoutConst = 20 #seconds
+moveTimeoutConst = 2 #seconds
 
 cam_id = 0 #"/dev/video0"
 scale = 1.0
@@ -39,13 +39,16 @@ scale = 1.0
 font = cv.FONT_HERSHEY_SIMPLEX
 
 movementDone = True
-moveStartTimestamp = 0
+moveActionTimestamp = time.time()
 stepCounter = 0
 
 
 current_robotDir = 0 #90, 180, 270.
-current_robotX = 1
-current_robotY = 1
+current_robotX = 0
+current_robotY = 0
+table_dict = dict()
+table_count = 0
+home_coords = np.array([0,0]).astype(int)
 
 
 cred = credentials.Certificate("firebase_key.json")
@@ -71,31 +74,31 @@ def getMap():
 matrix_size = 20
 
 fetched_map = getMap().split(',')
-fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size))
+fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size)).astype(int)
 grid_raw = fetched_map_matrix.astype(int)
 #print(fetched_map_matrix)
-grid_raw = np.array([
-            [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
-            ]).astype(int)
+# grid_raw = np.array([
+#             [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
+#             ]).astype(int)
 
 print(grid_raw)
 print((grid_raw).shape)
@@ -107,7 +110,23 @@ grid_raw[grid_raw == -1] = 4
 grid_raw[grid_raw == -2] = 0
 
 grid_raw_margined = grid_raw.copy()
-grid_loaded = Grid(matrix=grid_raw_margined)
+# grid_loaded = Grid(matrix=grid_raw_margined)
+
+
+# for row in range(matrix_size):
+#     for column in range(matrix_size):
+#         if(fetched_map_matrix[row][column]>=10):
+#             table_num = fetched_map_matrix[row][column] - 10
+#             if (table_num) not in table_dict:
+#                 table_dict[table_num] = [column, row]
+#                 print(f"Table {table_num} found x: {column}, y: {row}")
+#                 table_count+=1
+#         if(fetched_map_matrix[row][column] == 4):
+#             home_coords[0] = column
+#             home_coords[1] = row
+#             print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
+
+
 
 to_set_const = 4 #weight of margin entries
 populate = 1
@@ -287,7 +306,6 @@ def rescale_frame(frame, percent=75):
 
 
 def halt_movment():
-    ser.write(str.encode('x'))
     ser.write(str.encode('x'))
 
 def send_distance(distance, direction = 'r'):
@@ -476,64 +494,162 @@ def calcMovesHeading(path_arr):
             distance = 0
             ang_prev = arr_angle[j]        
     return arr_angle_clean
-      
+
+def calcLeastAngle(angle):
+    to_ret = angle
+    if(angle > 360):
+         to_ret = angle%360
+    if(angle < -360):
+        to_ret = -1*(abs(angle)%360)
+    if(angle == 270):
+        to_ret = -90
+    if(angle == -270):
+        to_ret = 90
+    return int(to_ret)
+
+def updateDisplay(arr):     
+    #display
+    x.clear()
+    y.clear()
+    for i in arr: 
+        x.append(i[0])
+    for i in arr: 
+        y.append(i[1])
+    sc.set_offsets(np.c_[x,y])
+    sc.axes.invert_yaxis()
+    fig.canvas.draw_idle()      
 
 headingTableX = 2
-headingTableY = 5
+headingTableY = 2
 current_step = 0
-
-
-arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
-distArr = []
-headingArr = []
-
-distances = calcMovesDistance(arr)
-
-angles = calcMovesHeading(arr)
-print("STARTING TEST SEQUENCE")
+distances = []
+angles = []
+print("STARTING PROGRAM")
 print()
-    
-#display
-x.clear()
-y.clear()
-for i in arr: 
-        x.append(i[0])
-for i in arr: 
-        y.append(i[1])
-sc.set_offsets(np.c_[x,y])
-sc.axes.invert_yaxis()
-fig.canvas.draw_idle()
 
+
+job = 0 #nothing
 start = time.time()
 while True:
     # Capture frame-by-frame
     try:
-        ret, frame = cap.read()
-        angle, distance = process_april_tags(frame)        
-
-
-        if(movementDone == True):
-            if(current_step < len(angles)):
-                i=current_step
-                if(angles[i] == 0):
-                    print("moving "+str(distances[i])+"m")
-                    send_distance(distances[i]*100)
-                    print()
-                    current_step += 1
-                else:
-                    print("rotating "+str(angles[i])+"°")
-                    send_angle(angles[i])
-                    print()
-                    toSubtract = angles[i]
-                    for ind in range(len(angles)):
-                        angles[ind] = (angles[ind]-toSubtract)
+        if(job == 0):
+            job = 9
+            print(f"JOB: {job}")
+        elif(job == 5):#check april location
+             ret, frame = cap.read()
+             angle, distance = process_april_tags(frame)    
+             cv.imshow('frame', frame)    
+        elif(job == 9):
+            #check for new data.
+            headingTableX = 1
+            headingTableY = 1 #setNew data.
+            job = 10
+            print(f"JOB: {job}")
+        elif(job == 10):
+            grid_loaded = Grid(matrix=grid_raw_margined)
+            arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            if(len(arr) > 0):
+                updateDisplay(arr)
+                distances = calcMovesDistance(arr)
+                angles = calcMovesHeading(arr)
+                current_step = 0
+                job = 11
+                print(f"JOB: {job}")
             else:
-                current_step = 100
-            #Code begin
-            movementDone = False
-            moveActionTimestamp = time.time()
-            print("[movement] Start")
-            #code end
+                print("Error with path - NEED JOB TO FIX")
+        elif(job == 11): #move to table
+            if(movementDone == True):
+                if(current_step < len(angles)):
+                    i=current_step
+                    if(angles[i] == 0):
+                        print("moving "+str(distances[i])+"m")
+                        send_distance(distances[i]*100)
+                        if(current_robotDir == 0):
+                            current_robotY += int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == 90):
+                            current_robotX -= int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == -90):
+                            current_robotX += int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == 180):
+                            current_robotY -= int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        print()
+                        current_step += 1
+                    else:
+                        print("rotating "+str(angles[i])+"°")
+                        send_angle(angles[i])
+                        print()
+                        toSubtract = angles[i]
+                        current_robotDir += toSubtract
+                        current_robotDir = calcLeastAngle(current_robotDir)
+                        print(f"Current Heading: {current_robotDir}")
+                        for ind in range(len(angles)):
+                            angles[ind] = calcLeastAngle(angles[ind]-toSubtract)
+                    movementDone = False
+                    moveActionTimestamp = time.time()
+                    print("[movement] Start")
+                else:
+                    job = 12
+                    print(f"JOB: {job}")
+        elif(job == 12):
+            time.sleep(5) #wait at table 5s
+            job = 13
+            print(f"JOB: {job}")
+        elif(job == 13): #return home
+            headingTableX = home_coords[0]
+            headingTableY = home_coords[1] #setNew data.
+            grid_loaded = Grid(matrix=grid_raw_margined)
+            arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            if(len(arr) > 0):
+                updateDisplay(arr)
+                distances = calcMovesDistance(arr)
+                angles = calcMovesHeading(arr)
+                current_step = 0
+                job = 14
+                print(f"JOB: {job}")
+            else:
+                print("Error with path - NEED JOB TO FIX")
+        elif(job == 14): #move home
+            if(movementDone == True):
+                if(current_step < len(angles)):
+                    i=current_step
+                    if(angles[i] == 0):
+                        print("moving "+str(distances[i])+"m")
+                        send_distance(distances[i]*100)
+                        if(current_robotDir == 0):
+                            current_robotY += int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == 90):
+                            current_robotX -= int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == -90):
+                            current_robotX += int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        elif(current_robotDir == 180):
+                            current_robotY -= int(distances[i]*2)
+                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        print()
+                        current_step += 1
+                    else:
+                        print("rotating "+str(angles[i])+"°")
+                        send_angle(angles[i])
+                        print()
+                        toSubtract = angles[i]
+                        current_robotDir += toSubtract
+                        current_robotDir = calcLeastAngle(current_robotDir)
+                        print(f"Current Heading: {current_robotDir}")
+                        for ind in range(len(angles)):
+                            angles[ind] = calcLeastAngle(angles[ind]-toSubtract)
+                    movementDone = False
+                    moveActionTimestamp = time.time()
+                    print("[movement] Start")
+                else:
+                    job = 1 #reset - does nothing
+                    print(f"JOB: {job}")
             
             
         
@@ -542,12 +658,12 @@ while True:
         if(test_mode == 0):
             readS = ser.read(1)
             print(readS)
-        if((b'\x61' == readS and movementDone == False) or time.time()-moveActionTimestamp >= moveTimeoutConst):
+        if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
                 print("[movement] Done")
                 print()
                 movementDone = True 
+                moveActionTimestamp = time.time()
                 time.sleep(0.1)
-        cv.imshow('frame', frame)
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
