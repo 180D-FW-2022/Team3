@@ -25,7 +25,7 @@ def getCurrentTable():
     return (ref.child("tableNumber").get())
 
 def isKitchenReady():
-    return (ref.child("kitchenReady").get())
+    return (ref.child("newTableReady").get())
 
 #set WOKer to ready (True)
 def WOKerReadyTrue():
