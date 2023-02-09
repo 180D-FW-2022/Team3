@@ -132,7 +132,7 @@ class KitchenGUI(MDApp):
                     self.data_tables.add_row(list((newOrderNumber, newTableNumber, itemString, qtyString, specialRequest)))
                     self.orderNumbers.append(newOrderNumber)
                 self.orderList.append(i)
-                print(self.orderNumbers)
+                # print(self.orderNumbers)
                 pass
 
     def setNewTable(self, event):
