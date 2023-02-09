@@ -82,7 +82,7 @@ unsigned long last_volt_time = 0;
 U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
 
 void setup() {
-  setMotorTorqueAll(0);
+  //setMotorTorqueAll(0);
   analogReference(DEFAULT);
   u8g2.begin();
   portSetup();
@@ -160,7 +160,7 @@ if(Serial.available()>0){
 }
 
 void readAndPrintVoltage(void){
- float bat_volt = (analogRead(A3)/1023.0)*(20.0);
+ float bat_volt = (analogRead(A3)/1023.0)*(16.0);
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
   u8g2.drawStr(0,10, "Total Voltage:");

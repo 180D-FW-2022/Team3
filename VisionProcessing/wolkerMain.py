@@ -26,12 +26,12 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 
-test_mode = 1
+test_mode = 0
 #global consts
 test_tag_id = 0
 distanceScale = 0.75
 
-moveTimeoutConst = 2 #seconds
+moveTimeoutConst = 20 #seconds
 
 cam_id = 0 #"/dev/video0"
 scale = 1.0
@@ -62,14 +62,20 @@ def __wipeFirebase():
 def getCurrentTable():
     return (ref.child("tableNumber").get())
 
-def isKitchenReady():
+def isKitchenReady(): #True when current table ready. Becomes false when woker ready set true 
     return (ref.child("kitchenReady").get())
 
-def setWOKerReady(state):
-    ref.child("WOKerReady").set(state)
+#set WOKer to ready (True)
+def WOKerReadyTrue():
+    ref.child("WOKerReady").set(True)
+
+#set robotReceived to recieved (True)
+def robotReceivedTrue():
+    ref.child("robotReceived").set(True)
 
 def getMap():
     return ref.child("map").get()
+
 
 matrix_size = 20
 
@@ -77,54 +83,57 @@ fetched_map = getMap().split(',')
 fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size)).astype(int)
 grid_raw = fetched_map_matrix.astype(int)
 #print(fetched_map_matrix)
-# grid_raw = np.array([
-#             [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
-#             ]).astype(int)
+
+grid_raw = np.array([
+            [4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
+            ]).astype(int)
+fetched_map_matrix = grid_raw.copy()
 
 print(grid_raw)
 print((grid_raw).shape)
 #grid_display = fetched_map_matrix.astype(int)
 grid_raw[grid_raw > 9] = -1
+grid_raw[grid_raw == 4] = -1
 grid_raw[grid_raw > 0] = -2
 grid_raw[grid_raw == 0] = 1
-grid_raw[grid_raw == -1] = 4
+grid_raw[grid_raw == -1] = 1
 grid_raw[grid_raw == -2] = 0
 
 grid_raw_margined = grid_raw.copy()
 # grid_loaded = Grid(matrix=grid_raw_margined)
 
 
-# for row in range(matrix_size):
-#     for column in range(matrix_size):
-#         if(fetched_map_matrix[row][column]>=10):
-#             table_num = fetched_map_matrix[row][column] - 10
-#             if (table_num) not in table_dict:
-#                 table_dict[table_num] = [column, row]
-#                 print(f"Table {table_num} found x: {column}, y: {row}")
-#                 table_count+=1
-#         if(fetched_map_matrix[row][column] == 4):
-#             home_coords[0] = column
-#             home_coords[1] = row
-#             print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
+for row in range(matrix_size):
+    for column in range(matrix_size):
+        if(fetched_map_matrix[row][column]>=10):
+            table_num = fetched_map_matrix[row][column] - 10
+            if (table_num) not in table_dict:
+                table_dict[table_num] = [column, row]
+                print(f"Table {table_num} found x: {column}, y: {row}")
+                table_count+=1
+        if(fetched_map_matrix[row][column] == 4):
+            home_coords[0] = column
+            home_coords[1] = row
+            print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
 
 
 
@@ -293,6 +302,7 @@ plt.imshow(grid_raw_margined, cmap=cmap)
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
+plt.waitforbuttonpress()
 #end
 
 
@@ -542,8 +552,9 @@ while True:
              cv.imshow('frame', frame)    
         elif(job == 9):
             #check for new data.
-            headingTableX = 1
-            headingTableY = 1 #setNew data.
+            print(table_dict[0])
+            headingTableX = table_dict[0][0]
+            headingTableY = table_dict[0][1]
             job = 10
             print(f"JOB: {job}")
         elif(job == 10):
