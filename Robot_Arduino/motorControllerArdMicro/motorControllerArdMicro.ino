@@ -375,7 +375,9 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         if(Serial.available() > 0){
           char d = Serial.read();
           if(d == 'x'){
-            
+            int distRemainCM = ((steps)-j+100)/10;
+            Serial.write((byte) (distRemainCM>>8));
+            Serial.write((byte) (distRemainCM));
             break;
           }
         }

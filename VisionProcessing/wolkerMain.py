@@ -26,7 +26,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 
-test_mode = 0
+test_mode = 1
 #global consts
 test_tag_id = 0
 distanceScale = 1.0
@@ -34,6 +34,8 @@ distanceScale = 1.0
 moveTimeoutConst = 40 #seconds
 
 cam_id = 2 #"/dev/video0"
+cam_id_bottom = 1
+
 scale = 1.0
 
 font = cv.FONT_HERSHEY_SIMPLEX
@@ -272,15 +274,53 @@ if(test_mode == 0):
     print(ser.name)         # check which port was really used
 
 #video init.
+index = 0
+arr = []
+while True:
+    cap = cv.VideoCapture(index)
+    if not cap.read()[0]:
+        break
+    else:
+        ret_test, frame_test = cap.read()
+        print(f"Frame x:{frame_test.shape[0]}, y: {frame_test.shape[1]}")
+        if(int(frame_test.shape[0]) == 1920):
+            arr.append(index)
+    cap.release()
+    index += 1
+if(len(arr) != 2):
+    print("[ camera ] Connect both cameras")
+    exit(0)
+cam_id = arr[0]
+cam_id_bottom = [1]
 cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
-    print("[ camera ] Cannot open")
+    print("[ camera ] Cannot open top")
     exit()
+cap_bottom = cv.VideoCapture(cam_id_bottom)
+if not cap_bottom.isOpened():
+    print("[ camera ] Cannot open bottom")
+    exit()
+
 ret_start, frame_start = cap.read()
 average = frame_start.mean(axis=0).mean(axis=0)
-# if(average[0] < 5.0):
-#     cam_id+=1
-#     cap = cv.VideoCapture(cam_id)
+if(average[0] < 5.0):
+    print("[ camera ] Flipping top and bottom")
+    cap.release()
+    cap_bottom.release()
+    temp = cam_id_bottom
+    cam_id_bottom = cam_id
+    cam_id = temp
+    
+cap = cv.VideoCapture(cam_id)
+if not cap.isOpened():
+    print("[ camera ] Cannot open top")
+    exit()
+cap_bottom = cv.VideoCapture(cam_id_bottom)
+if not cap_bottom.isOpened():
+    print("[ camera ] Cannot open bottom")
+    exit()
+#video init end
+
 #APTag detector init.
 at_detector = Detector(
    families="tag36h11",
@@ -315,7 +355,155 @@ plt.ylim(-1,21)
 plt.draw()
 #end
 
+
+
+#stereo inits
+
+print("Setting parameters Single ......")
+DIM=(1920, 1080)
+K=np.array([[1053.9492767154009, 0.0, 951.950093568802], [0.0, 1052.5528725501529, 465.04595064900246], [0.0, 0.0, 1.0]])
+D=np.array([[-0.05334899174471995], [0.004050987506634966], [-0.001763065658573223], [-0.0027162184694266523]])
+map1, map2 = cv.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv.CV_16SC2)
+
+print("Reading parameters Stereo ......")
+cv_file = cv.FileStorage("./data/params_py.xml", cv.FILE_STORAGE_READ)
+
+Left_Stereo_Map_x = cv_file.getNode("Left_Stereo_Map_x").mat()
+Left_Stereo_Map_y = cv_file.getNode("Left_Stereo_Map_y").mat()
+Right_Stereo_Map_x = cv_file.getNode("Right_Stereo_Map_x").mat()
+Right_Stereo_Map_y = cv_file.getNode("Right_Stereo_Map_y").mat()
+cv_file.release()
+
+disparity = None
+depth_map = None
+
+# These parameters can vary according to the setup
+max_depth = 400 # maximum distance the setup can measure (in cm)
+min_depth = 50 # minimum distance the setup can measure (in cm)
+depth_thresh = 100.0 # Threshold for SAFE distance (in cm)
+
+# Reading the stored the StereoBM parameters
+cv_file = cv.FileStorage("./depthEst.xml", cv.FILE_STORAGE_READ)
+numDisparities = int(cv_file.getNode("numDisparities").real())
+blockSize = int(cv_file.getNode("blockSize").real())
+preFilterType = int(cv_file.getNode("preFilterType").real())
+preFilterSize = int(cv_file.getNode("preFilterSize").real())
+preFilterCap = int(cv_file.getNode("preFilterCap").real())
+textureThreshold = int(cv_file.getNode("textureThreshold").real())
+uniquenessRatio = int(cv_file.getNode("uniquenessRatio").real())
+speckleRange = int(cv_file.getNode("speckleRange").real())
+speckleWindowSize = int(cv_file.getNode("speckleWindowSize").real())
+disp12MaxDiff = int(cv_file.getNode("disp12MaxDiff").real())
+minDisparity = int(cv_file.getNode("minDisparity").real())
+M = cv_file.getNode("M").real()
+cv_file.release()
+
+
+cv.namedWindow('disp',cv.WINDOW_NORMAL)
+cv.resizeWindow('disp',600,600)
+
+output_canvas = None
+
+# Creating an object of StereoBM algorithm
+stereo = cv.StereoBM_create()
+stereo.setNumDisparities(numDisparities)
+stereo.setBlockSize(blockSize)
+stereo.setPreFilterType(preFilterType)
+stereo.setPreFilterSize(preFilterSize)
+stereo.setPreFilterCap(preFilterCap)
+stereo.setTextureThreshold(textureThreshold)
+stereo.setUniquenessRatio(uniquenessRatio)
+stereo.setSpeckleRange(speckleRange)
+stereo.setSpeckleWindowSize(speckleWindowSize)
+stereo.setDisp12MaxDiff(disp12MaxDiff)
+stereo.setMinDisparity(minDisparity)
+#end
+
+
+
+
+
+
 #functions
+
+#stereo
+
+def obstacle_avoid():
+
+    # Mask to segment regions with depth less than threshold
+    mask = cv.inRange(depth_map,10,depth_thresh)
+
+    # Check if a significantly large obstacle is present and filter out smaller noisy regions
+    if np.sum(mask)/255.0 > 0.01*mask.shape[0]*mask.shape[1]:
+
+        # Contour detection 
+        contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        cnts = sorted(contours, key=cv.contourArea, reverse=True)
+        
+        # Check if detected contour is significantly large (to avoid multiple tiny regions)
+        if cv.contourArea(cnts[0]) > 0.01*mask.shape[0]*mask.shape[1]:
+
+            x,y,w,h = cv.boundingRect(cnts[0])
+
+            # finding average depth of region represented by the largest contour 
+            mask2 = np.zeros_like(mask)
+            cv.drawContours(mask2, cnts, 0, (255), -1)
+
+            # Calculating the average depth of the object closer than the safe distance
+            depth_mean, _ = cv.meanStdDev(depth_map, mask=mask2)
+            
+            # Display warning text
+            cv.putText(output_canvas, "WARNING !", (x+5,y-40), 1, 2, (0,0,255), 2, 2)
+            cv.putText(output_canvas, "Object at", (x+5,y), 1, 2, (100,10,25), 2, 2)
+            cv.putText(output_canvas, "%.2f cm"%depth_mean, (x+5,y+40), 1, 2, (100,10,25), 2, 2)
+            return depth_mean
+
+    else:
+        cv.putText(output_canvas, "SAFE!", (100,100),1,3,(0,255,0),2,3)
+        return 10000
+
+    cv.imshow('output_canvas',output_canvas)
+
+
+def processStereo(img, img_bottom):
+    output_canvas = img.copy()
+    imgR = img
+    imgL = img_bottom
+    imgR_gray = cv.cvtColor(imgR,cv.COLOR_BGR2GRAY)
+    imgL_gray = cv.cvtColor(imgL,cv.COLOR_BGR2GRAY)
+
+    Left_nice = cv.remap(imgL, map1, map2, interpolation=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT)
+    Right_nice = cv.remap(imgR, map1, map2, interpolation=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT)
+
+    Left_nice= cv.remap(Left_nice,Left_Stereo_Map_x,Left_Stereo_Map_y, cv.INTER_LANCZOS4, cv.BORDER_CONSTANT, 0)
+    Right_nice= cv.remap(Right_nice,Right_Stereo_Map_x,Right_Stereo_Map_y, cv.INTER_LANCZOS4, cv.BORDER_CONSTANT, 0)
+    Left_nice = cv.cvtColor(Left_nice,cv.COLOR_BGR2GRAY)
+    Right_nice = cv.cvtColor(Right_nice,cv.COLOR_BGR2GRAY)
+    Left_nice = cv.resize(Left_nice, (600, 500))
+    Right_nice = cv.resize(Right_nice, (600, 500))
+    # Calculating disparity using the StereoBM algorithm
+    disparity = stereo.compute(Left_nice,Right_nice)
+    # NOTE: compute returns a 16bit signed single channel image,
+    # CV_16S containing a disparity map scaled by 16. Hence it 
+    # is essential to convert it to CV_16S and scale it down 16 times.
+
+    # Converting to float32 
+    disparity = disparity.astype(np.float32)
+
+    # Normalizing the disparity map
+    disparity = (disparity/16.0 - minDisparity)/numDisparities
+    
+    depth_map = M/(disparity) # for depth in (cm)
+
+    mask_temp = cv.inRange(depth_map,min_depth,max_depth)
+    depth_map = cv.bitwise_and(depth_map,depth_map,mask=mask_temp)
+    depth_value = obstacle_avoid()
+    cv.resizeWindow("disp",700,700)
+    cv.imshow("disp",disparity)
+    return depth_value
+#end
+
+
 def rescale_frame(frame, percent=75):
     width = int(frame.shape[1] * percent/ 100)
     height = int(frame.shape[0] * percent/ 100)
@@ -325,7 +513,16 @@ def rescale_frame(frame, percent=75):
 
 def halt_movment():
     ser.write(str.encode('x'))
-    print("halt")
+    #wait for reply up to 0.3 seconds
+    for i in range(6):
+        if(ser.read(2) != ''):
+            distance_remaining = struct.unpack('>h', ser.read(2))
+            print(distance_remaining)
+            return distance_remaining
+        time.sleep(0.05)
+    return -1
+
+
 
 def send_distance(distance, direction = 'r'):
     if(test_mode == 0):  
@@ -562,10 +759,36 @@ while True:
             job = 9
             print(f"JOB: {job}")
         elif(job == 5):#check april location
-             ret, frame = cap.read()
-             x_offset, angle, distance = process_april_tags(frame)  
-             print(f"X-OFFSET: {x_offset}, Distance: {distance}")  
-             cv.imshow('frame', frame)    
+             ret, frame_top = cap.read()
+             if(ret):
+                x_offset, angle, distance = process_april_tags(frame_top)  
+                print(f"X-OFFSET: {x_offset}, Distance: {distance}")  
+                cv.imshow('frame', frame_top) 
+        elif(job  == 6):
+
+            ret, frame_top = cap.read()
+            ret_b, frame_bottom = cap_bottom.read()
+            if ret and ret_b:
+                print(f"Stereo Returned Object: {processStereo(frame_top, frame_bottom)}")
+            distance_to_closest = 50 #cm
+            if(distance_to_closest < 45):
+                print(f"Obstacle @: {distance_to_closest}")
+                rem_dist = halt_movment()
+                if(rem_dist == -1):
+                    rem_dist = halt_movment()
+                if(rem_dist != -1):
+                    if(current_robotDir == 0):
+                        current_robotY -= int(rem_dist/100)
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                    elif(current_robotDir == 90):
+                        current_robotX += int(rem_dist/100)
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                    elif(current_robotDir == -90):
+                        current_robotX -= int(rem_dist/100)
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                    elif(current_robotDir == 180):
+                        current_robotY += int(rem_dist/100)
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
         elif(job == 9):
             #check for new data.
             print(table_dict[0])
@@ -593,8 +816,6 @@ while True:
                     if(angles[i] == 0):
                         print("moving "+str(distances[i])+"m")
                         send_distance(distances[i]*100)
-                        time.sleep(2)
-                        halt_movment()
                         if(current_robotDir == 0):
                             current_robotY += int(distances[i]*2)
                             print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
