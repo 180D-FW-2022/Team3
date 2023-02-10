@@ -83,7 +83,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //O
 
 void setup() {
   //setMotorTorqueAll(0);
-  analogReference(DEFAULT);
+  analogReference(EXTERNAL);
   u8g2.begin();
   portSetup();
   Timer1.initialize(10000); //every 10ms run interrupt
@@ -160,7 +160,7 @@ if(Serial.available()>0){
 }
 
 void readAndPrintVoltage(void){
- float bat_volt = (analogRead(A3)/1023.0)*(16.0);
+ float bat_volt = (analogRead(A3)/1023.0)*(30.5)*(1.0); //last value is adjustment factor for ref voltage
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
   u8g2.drawStr(0,10, "Total Voltage:");
@@ -330,6 +330,12 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         for(long int j = 0L; j < (steps-200L); j++){
         stepMotor(2, spd);
         stepMotor(4, spd);
+        if(Serial.available() > 0){
+          char d = Serial.read();
+          if(d == 'x'){
+            break;
+          }
+        }
         }
         for(int i = 0; i < 20; i++){
         stepMotor(2, SPD_3);
@@ -366,6 +372,13 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         for(long j = 0L; j < steps-(200L); j++){
         stepMotor(1, spd);
         stepMotor(3, spd);
+        if(Serial.available() > 0){
+          char d = Serial.read();
+          if(d == 'x'){
+            
+            break;
+          }
+        }
         }
         for(int i = 0; i < 20; i++){
         stepMotor(1, SPD_3);
