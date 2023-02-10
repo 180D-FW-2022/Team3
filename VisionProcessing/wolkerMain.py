@@ -29,11 +29,11 @@ from firebase_admin import db
 test_mode = 0
 #global consts
 test_tag_id = 0
-distanceScale = 0.75
+distanceScale = 1.0
 
-moveTimeoutConst = 20 #seconds
+moveTimeoutConst = 40 #seconds
 
-cam_id = 0 #"/dev/video0"
+cam_id = 2 #"/dev/video0"
 scale = 1.0
 
 font = cv.FONT_HERSHEY_SIMPLEX
@@ -97,10 +97,10 @@ grid_raw = np.array([
             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -108,7 +108,7 @@ grid_raw = np.array([
             ]).astype(int)
 fetched_map_matrix = grid_raw.copy()
 
-print(grid_raw)
+#print(grid_raw)
 print((grid_raw).shape)
 #grid_display = fetched_map_matrix.astype(int)
 grid_raw[grid_raw > 9] = -1
@@ -276,7 +276,11 @@ cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
     print("[ camera ] Cannot open")
     exit()
-    
+ret_start, frame_start = cap.read()
+average = frame_start.mean(axis=0).mean(axis=0)
+# if(average[0] < 5.0):
+#     cam_id+=1
+#     cap = cv.VideoCapture(cam_id)
 #APTag detector init.
 at_detector = Detector(
    families="tag36h11",
@@ -296,16 +300,20 @@ plt.ion()
 fig, ax = plt.subplots()
 x, y = [],[]
 sc = ax.scatter(x,y)
-colorsList = ['g', 'w', 'grey' ,'grey', 'grey']
-cmap = mpl.colors.ListedColormap(colorsList)
-plt.imshow(grid_raw_margined, cmap=cmap)
+cmap = plt.cm.jet  # define the colormap
+cmaplist = [cmap(i) for i in range(cmap.N)]
+cmaplist[0] = (1, 1, 1, 1.0) #allowed spaces
+cmap_new = mpl.colors.LinearSegmentedColormap.from_list(
+    'Custom cmap', cmaplist)
+bounds = np.linspace(-1, 20, 21)
+norm = mpl.colors.BoundaryNorm(bounds, cmap_new.N)
+
+plt.imshow(fetched_map_matrix, cmap=cmap_new, norm=norm)
+plt.colorbar(plt.cm.ScalarMappable(cmap=cmap_new, norm=norm))
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.draw()
-plt.waitforbuttonpress()
 #end
-
-
 
 #functions
 def rescale_frame(frame, percent=75):
@@ -317,6 +325,7 @@ def rescale_frame(frame, percent=75):
 
 def halt_movment():
     ser.write(str.encode('x'))
+    print("halt")
 
 def send_distance(distance, direction = 'r'):
     if(test_mode == 0):  
@@ -366,18 +375,20 @@ def process_april_tags(frame):
     wid = img_size[1]
     hei = img_size[0]
     angleStore = 0
+    xStore = 0
     distanceStore = 0
 
     for i in result: #for each detected aprilTag. 
-        if(i.tag_id == test_tag_id):#):
+        if(True):#i.tag_id == test_tag_id):#):
             cent = i.center
-            Pose_R = i.pose_R
+            #Pose_R = i.pose_R
             Pose_T = i.pose_t
             # print(i)
             unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
-            # print("relative pos: ")
+            #print(f"relative angle: {Pose_R}")
             #print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
-            angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[0])*(180/math.pi))
+            x_offset = unofficial_tag_position[1]
+            angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi))
             angle_temp = angle
             angle = int(90-abs(angle))
             if(angle_temp > 0):
@@ -387,6 +398,7 @@ def process_april_tags(frame):
 
             angleStore += angle
             distanceStore += distance
+            xStore += x_offset
 
             #print("[ angle  ]: "+str(angle))
             #print("[distance]: "+str(distance))
@@ -395,7 +407,8 @@ def process_april_tags(frame):
     if(len(result) > 0):
         angleStore = int(angleStore/len(result))
         distanceStore = int(distanceStore/len(result))
-    return angleStore, distanceStore
+        xStore = int(xStore/len(result))
+    return x_offset, angleStore, distanceStore
 
 def calcPath(grid, start_x, start_y, goal_x, goal_y):
     start = grid.node(start_x, start_y)
@@ -526,8 +539,10 @@ def updateDisplay(arr):
     for i in arr: 
         y.append(i[1])
     sc.set_offsets(np.c_[x,y])
-    sc.axes.invert_yaxis()
-    fig.canvas.draw_idle()      
+    #sc.axes.invert_yaxis()
+    sc.axes.invert_xaxis()
+    fig.canvas.draw_idle()     
+    plt.pause(1) 
 
 headingTableX = 2
 headingTableY = 2
@@ -537,7 +552,7 @@ angles = []
 print("STARTING PROGRAM")
 print()
 
-
+halt_movment()
 job = 0 #nothing
 start = time.time()
 while True:
@@ -548,7 +563,8 @@ while True:
             print(f"JOB: {job}")
         elif(job == 5):#check april location
              ret, frame = cap.read()
-             angle, distance = process_april_tags(frame)    
+             x_offset, angle, distance = process_april_tags(frame)  
+             print(f"X-OFFSET: {x_offset}, Distance: {distance}")  
              cv.imshow('frame', frame)    
         elif(job == 9):
             #check for new data.
@@ -562,8 +578,9 @@ while True:
             arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             if(len(arr) > 0):
                 updateDisplay(arr)
+                
                 distances = calcMovesDistance(arr)
-                angles = calcMovesHeading(arr)
+                angles = calcMovesHeading(arr)                
                 current_step = 0
                 job = 11
                 print(f"JOB: {job}")
@@ -576,6 +593,8 @@ while True:
                     if(angles[i] == 0):
                         print("moving "+str(distances[i])+"m")
                         send_distance(distances[i]*100)
+                        time.sleep(2)
+                        halt_movment()
                         if(current_robotDir == 0):
                             current_robotY += int(distances[i]*2)
                             print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
@@ -669,6 +688,8 @@ while True:
         if(test_mode == 0):
             readS = ser.read(1)
             print(readS)
+        if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
+            print("[WARNING] TIMEOUT")
         if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
                 print("[movement] Done")
                 print()
