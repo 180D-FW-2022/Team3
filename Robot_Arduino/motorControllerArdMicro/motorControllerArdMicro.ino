@@ -364,16 +364,27 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(2, SPD_3);
         stepMotor(4, SPD_3);
         }
+        bool isHalt = 0;
         for(long int j = 0L; j < (steps-200L); j++){
+          if(isHalt == 0){
         stepMotor(2, spd);
         stepMotor(4, spd);
+          }else{
+            break;
+          }
         if(Serial.available() > 0){
           char d = Serial.read();
           if(d == 'x'){
+            isHalt = 1;
+            int distRemainCM = (((steps-100L)-j)*movLin_mmStep)/10;
+            Serial.write((byte) (distRemainCM>>8));
+            Serial.write((byte) (distRemainCM));
+            break;
             break;
           }
         }
         }
+        if(!isHalt){
         for(int i = 0; i < 20; i++){
         stepMotor(2, SPD_3);
         stepMotor(4, SPD_3);
@@ -385,6 +396,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         for(int i = 0; i < 50; i++){
         stepMotor(2, SPD_1);
         stepMotor(4, SPD_1);
+        }
         }
       } 
      }else{
@@ -406,19 +418,27 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(1, SPD_3);
         stepMotor(3, SPD_3);
         }
+        bool isHalt = 0;
         for(long j = 0L; j < steps-(200L); j++){
+          if(isHalt == 0){
         stepMotor(1, spd);
         stepMotor(3, spd);
+          }else{
+            break;
+            }
         if(Serial.available() > 0){
           char d = Serial.read();
           if(d == 'x'){
-            int distRemainCM = ((steps)-j+100)/10;
+            isHalt = 1;
+            int distRemainCM = (((steps-100L)-j)*movLin_mmStep)/10;
             Serial.write((byte) (distRemainCM>>8));
             Serial.write((byte) (distRemainCM));
+            break;
             break;
           }
         }
         }
+        if(!isHalt){
         for(int i = 0; i < 20; i++){
         stepMotor(1, SPD_3);
         stepMotor(3, SPD_3);
@@ -431,6 +451,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         stepMotor(1, SPD_1);
         stepMotor(3, SPD_1);
         }
+      }
       }
       }
 }

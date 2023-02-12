@@ -31,7 +31,7 @@ from firebase_admin import db
 test_mode = 0
 #global consts
 test_tag_id = 0
-distanceScale = 1.0
+distanceScale = 1.1
 
 moveTimeoutConst = 40 #seconds
 
@@ -322,6 +322,9 @@ cap_bottom = cv.VideoCapture(cam_id_bottom)
 if not cap_bottom.isOpened():
     print("[ camera ] Cannot open bottom")
     exit()
+
+print("PLEASE REMOVE BOTTOM CAP and press enter")
+input()
 #video init end
 
 #APTag detector init.
@@ -360,9 +363,9 @@ plt.draw()
 
 
 
-#stereo inits
-
-print("Setting parameters Single ......")
+global stereo, output_canvas, depth_map
+#stereo init
+print("Settng parameters Single ......")
 DIM=(1920, 1080)
 K=np.array([[1053.9492767154009, 0.0, 951.950093568802], [0.0, 1052.5528725501529, 465.04595064900246], [0.0, 0.0, 1.0]])
 D=np.array([[-0.05334899174471995], [0.004050987506634966], [-0.001763065658573223], [-0.0027162184694266523]])
@@ -382,8 +385,8 @@ depth_map = None
 
 # These parameters can vary according to the setup
 max_depth = 400 # maximum distance the setup can measure (in cm)
-min_depth = 50 # minimum distance the setup can measure (in cm)
-depth_thresh = 100.0 # Threshold for SAFE distance (in cm)
+min_depth = 0 # minimum distance the setup can measure (in cm)
+depth_thresh = 200.0 # Threshold for SAFE distance (in cm)
 
 # Reading the stored the StereoBM parameters
 cv_file = cv.FileStorage("./depthEst.xml", cv.FILE_STORAGE_READ)
@@ -405,28 +408,10 @@ cv_file.release()
 cv.namedWindow('disp',cv.WINDOW_NORMAL)
 cv.resizeWindow('disp',600,600)
 
+
 output_canvas = None
 
-# Creating an object of StereoBM algorithm
 stereo = cv.StereoBM_create()
-stereo.setNumDisparities(numDisparities)
-stereo.setBlockSize(blockSize)
-stereo.setPreFilterType(preFilterType)
-stereo.setPreFilterSize(preFilterSize)
-stereo.setPreFilterCap(preFilterCap)
-stereo.setTextureThreshold(textureThreshold)
-stereo.setUniquenessRatio(uniquenessRatio)
-stereo.setSpeckleRange(speckleRange)
-stereo.setSpeckleWindowSize(speckleWindowSize)
-stereo.setDisp12MaxDiff(disp12MaxDiff)
-stereo.setMinDisparity(minDisparity)
-#end
-
-
-
-
-
-
 #functions
 
 #stereo
@@ -437,14 +422,14 @@ def obstacle_avoid():
     mask = cv.inRange(depth_map,10,depth_thresh)
 
     # Check if a significantly large obstacle is present and filter out smaller noisy regions
-    if np.sum(mask)/255.0 > 0.01*mask.shape[0]*mask.shape[1]:
+    if np.sum(mask)/255.0 > 0.005*mask.shape[0]*mask.shape[1]:
 
         # Contour detection 
         contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         cnts = sorted(contours, key=cv.contourArea, reverse=True)
         
         # Check if detected contour is significantly large (to avoid multiple tiny regions)
-        if cv.contourArea(cnts[0]) > 0.01*mask.shape[0]*mask.shape[1]:
+        if True:#cv.contourArea(cnts[0]) > 0.01*mask.shape[0]*mask.shape[1]:
 
             x,y,w,h = cv.boundingRect(cnts[0])
 
@@ -454,27 +439,22 @@ def obstacle_avoid():
 
             # Calculating the average depth of the object closer than the safe distance
             depth_mean, _ = cv.meanStdDev(depth_map, mask=mask2)
-            
-            # Display warning text
-            cv.putText(output_canvas, "WARNING !", (x+5,y-40), 1, 2, (0,0,255), 2, 2)
-            cv.putText(output_canvas, "Object at", (x+5,y), 1, 2, (100,10,25), 2, 2)
-            cv.putText(output_canvas, "%.2f cm"%depth_mean, (x+5,y+40), 1, 2, (100,10,25), 2, 2)
-            return depth_mean
+            return float(depth_mean)
 
     else:
         cv.putText(output_canvas, "SAFE!", (100,100),1,3,(0,255,0),2,3)
-        return 10000
+        return -1
 
     cv.imshow('output_canvas',output_canvas)
 
 
-def processStereo(img, img_bottom):
-    output_canvas = img.copy()
-    imgR = img
-    imgL = img_bottom
+def processStereo(imgR, imgL):
+    global stereo, output_canvas, depth_map
+    output_canvas = imgL.copy()
+
     imgR_gray = cv.cvtColor(imgR,cv.COLOR_BGR2GRAY)
     imgL_gray = cv.cvtColor(imgL,cv.COLOR_BGR2GRAY)
-
+    #map1, map2 = cv.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv.CV_16SC2)
     Left_nice = cv.remap(imgL, map1, map2, interpolation=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT)
     Right_nice = cv.remap(imgR, map1, map2, interpolation=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT)
 
@@ -484,6 +464,19 @@ def processStereo(img, img_bottom):
     Right_nice = cv.cvtColor(Right_nice,cv.COLOR_BGR2GRAY)
     Left_nice = cv.resize(Left_nice, (600, 500))
     Right_nice = cv.resize(Right_nice, (600, 500))
+    # Setting the updated parameters before computing disparity map
+    stereo.setNumDisparities(numDisparities)
+    stereo.setBlockSize(blockSize)
+    stereo.setPreFilterType(preFilterType)
+    stereo.setPreFilterSize(preFilterSize)
+    stereo.setPreFilterCap(preFilterCap)
+    stereo.setTextureThreshold(textureThreshold)
+    stereo.setUniquenessRatio(uniquenessRatio)
+    stereo.setSpeckleRange(speckleRange)
+    stereo.setSpeckleWindowSize(speckleWindowSize)
+    stereo.setDisp12MaxDiff(disp12MaxDiff)
+    stereo.setMinDisparity(minDisparity)
+
     # Calculating disparity using the StereoBM algorithm
     disparity = stereo.compute(Left_nice,Right_nice)
     # NOTE: compute returns a 16bit signed single channel image,
@@ -495,14 +488,17 @@ def processStereo(img, img_bottom):
 
     # Normalizing the disparity map
     disparity = (disparity/16.0 - minDisparity)/numDisparities
-    
+
     depth_map = M/(disparity) # for depth in (cm)
 
     mask_temp = cv.inRange(depth_map,min_depth,max_depth)
     depth_map = cv.bitwise_and(depth_map,depth_map,mask=mask_temp)
+
     depth_value = obstacle_avoid()
+    
     cv.resizeWindow("disp",700,700)
     cv.imshow("disp",disparity)
+    
     return depth_value
 #end
 
@@ -516,15 +512,21 @@ def rescale_frame(frame, percent=75):
 
 def halt_movment():
     ser.write(str.encode('x'))
+    ser.write(str.encode('x'))
     #wait for reply up to 0.3 seconds
-    for i in range(6):
-        data = ser.read(2)
-        print(data.decode().strip())
-        if(data.decode().strip() != ''):
-            distance_remaining = struct.unpack('>h', ser.read(2))
-            print(distance_remaining)
-            return distance_remaining
-        time.sleep(0.05)
+    data = ser.read(2)
+    print(int.from_bytes(data, "little"))
+        #print(data.decode().strip())
+        #if(data.decode().strip() != '' and len(data.decode().strip()) == 2):
+        # try:
+        #     distance_remaining = struct.unpack('>h', ser.read(2))
+        #     print(distance_remaining)
+        #     return distance_remaining
+        # except:
+        #     print("error decode")
+        # elif(data.decode().strip() != '' and len(data.decode().strip()) == 1):
+        #     if(data.decode().strip() == 'a'):
+        #         print("[position]: Upon obstacle stop location lost")
     return -1
 
 
@@ -568,56 +570,58 @@ def send_angle(angle):
         #     time.sleep(0.1)
         time.sleep(0.1)
 
-def process_april_tags(frame):
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    gray = rescale_frame(gray, 100/scale)
-    result = at_detector.detect(gray, True, (978/scale, 978/scale, 930/scale, 524/scale), 0.175)
-    img_size = gray.shape
-    
-    wid = img_size[1]
-    hei = img_size[0]
+def process_april_tags(frames):
     angleStore = 0
     xStore = 0
     eulerRotx = 0
     distanceStore = 0
+    total_results = 0
+    for frame in frames: #for each detected aprilTag. 
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        gray = rescale_frame(gray, 100/scale)
+        result = at_detector.detect(gray, True, (978/scale, 978/scale, 930/scale, 524/scale), 0.171)
+        img_size = gray.shape
 
-    for i in result: #for each detected aprilTag. 
-        if(True):#i.tag_id == test_tag_id):#):
-            x_offset = 0
-            cent = i.center
-            Pose_R = i.pose_R
-            Pose_T = i.pose_t
-            rot_matrix = R.from_matrix(Pose_R)
-            eulers = rot_matrix.as_euler('zxy', degrees=True)
-            print("Euler Angles: ")
-            print(eulers)
-            eulerRotx += eulers[1]
-            # print(i)
-            unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
-            #print(f"relative angle: {Pose_R}")
-            #print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
-            x_offset = unofficial_tag_position[1]
-            angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi))
-            angle_temp = angle
-            angle = int(90-abs(angle))
-            if(angle_temp > 0):
-                angle = angle * -1
+        wid = img_size[1]
+        hei = img_size[0]
+        for i in result:
+            if(len(result)>0 and i.tag_id == 0):#i.tag_id == test_tag_id):#):
+                total_results += 1
+                x_offset = 0
+                cent = i.center
+                Pose_R = i.pose_R
+                Pose_T = i.pose_t
+                rot_matrix = R.from_matrix(Pose_R)
+                eulers = rot_matrix.as_euler('zxy', degrees=True)
+                #print("Euler Angles: ")
+                #print(eulers)
+                eulerRotx += eulers[1]
+                # print(i)
+                unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
+                #print(f"relative angle: {Pose_R}")
+               # print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
+                x_offset = unofficial_tag_position[1]
+                angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi))
+                angle_temp = angle
+                angle = int(90-abs(angle))
+                if(angle_temp > 0):
+                    angle = angle * -1
 
-            distance = abs(int(unofficial_tag_position[2]*100*distanceScale)) 
+                distance = abs(int(unofficial_tag_position[2]*100*distanceScale)) 
 
-            angleStore += angle
-            distanceStore += distance
-            xStore += x_offset
+                angleStore += angle
+                distanceStore += distance
+                xStore += x_offset
 
-            #print("[ angle  ]: "+str(angle))
-            #print("[distance]: "+str(distance))
-            cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
-            cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
-    if(len(result) > 0):
-        angleStore = int(angleStore/len(result))
-        distanceStore = int(distanceStore/len(result))
-        xStore = float(xStore/len(result))
-        eulerRotx = int(eulerRotx/len(result))
+                #print("[ angle  ]: "+str(angle))
+                #print("[distance]: "+str(distance))
+                cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
+                cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
+    if(total_results > 0):
+        angleStore = int(angleStore/total_results)
+        distanceStore = int(distanceStore/total_results)
+        xStore = float(xStore/total_results)
+        eulerRotx = int(eulerRotx/total_results)
     return xStore, eulerRotx, angleStore, distanceStore
 
 def calcPath(grid, start_x, start_y, goal_x, goal_y):
@@ -763,7 +767,7 @@ print("STARTING PROGRAM")
 print()
 
 halt_movment()
-job = 5 #nothing
+job = 0 #nothing
 start = time.time()
 while True:
     # Capture frame-by-frame
@@ -772,28 +776,34 @@ while True:
             job = 9
             print(f"JOB: {job}")
         elif(job == 5):#check april location
-            ret, frame_top = cap.read()
-            if(ret):
-                x_offset, euler_rotation_x, angle, distance = process_april_tags(frame_top)  
-                print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
-                cv.imshow('frame', frame_top) 
-                cv.waitKey(1)
-
-                send_angle(euler_rotation_x*2)
-                time.sleep(3)
-                if(x_offset > 0):
-                    send_distance(x_offset*100, 'b')
-                else:
-                    send_distance(x_offset*100, 'w')
-                time.sleep(3)
+            countFrame = 0
+            frames_top = []
+            while (countFrame < 5):
+                ret, frame_top = cap.read()
+                if(ret):
+                    countFrame+=1
+                    frames_top.append(frame_top)
+            while (countFrame < 10):
+                ret, frame_top = cap_bottom.read()
+                if(ret):
+                    countFrame+=1
+                    frames_top.append(frame_top)
+            x_offset, euler_rotation_x, angle, distance = process_april_tags(frames_top)  
+            print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
+            cv.imshow('frame', frames_top[0]) 
+            cv.waitKey(1)
         elif(job  == 6):
-
             ret, frame_top = cap.read()
             ret_b, frame_bottom = cap_bottom.read()
+            distance_to_closest = None
+            procseedStero = 100
             if ret and ret_b:
-                print(f"Stereo Returned Object: {processStereo(frame_top, frame_bottom)}")
-            distance_to_closest = 50 #cm
-            if(distance_to_closest < 45):
+                imgForStereo = frame_top
+                imgBotForStereo = frame_bottom
+                procseedStero = processStereo(frame_top, frame_bottom)
+                print(f"Stereo Returned Object: {procseedStero}")
+            distance_to_closest = procseedStero #cm
+            if(distance_to_closest < 90): #make sure to only call in linear movment. 
                 print(f"Obstacle @: {distance_to_closest}")
                 rem_dist = halt_movment()
                 if(rem_dist == -1):
@@ -851,6 +861,7 @@ while True:
                             current_robotY -= int(distances[i]*2)
                             print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         print()
+                        job = 6
                         current_step += 1
                     else:
                         print("rotating "+str(angles[i])+"°")

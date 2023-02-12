@@ -4,8 +4,8 @@ import cv2
 
 # Check for left and right camera IDs
 # These values can change depending on the system
-CamL_id = 0 # Camera ID for left camera
-CamR_id = 2 # Camera ID for right camera
+CamL_id = 1 # Camera ID for left camera
+CamR_id = 0 # Camera ID for right camera
 
 
 CamL= cv2.VideoCapture(CamL_id)
@@ -111,7 +111,7 @@ while True:
 
         imgR_gray = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
         imgL_gray = cv2.cvtColor(imgL,cv2.COLOR_BGR2GRAY)
-
+        #map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
         Left_nice = cv2.remap(imgL, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
         Right_nice = cv2.remap(imgR, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
@@ -145,7 +145,7 @@ while True:
 
         # Normalizing the disparity map
         disparity = (disparity/16.0 - minDisparity)/numDisparities
-        
+
         depth_map = M/(disparity) # for depth in (cm)
 
         mask_temp = cv2.inRange(depth_map,min_depth,max_depth)
