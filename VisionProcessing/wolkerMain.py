@@ -15,6 +15,8 @@ import time
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
+from scipy.spatial.transform import Rotation as R
+
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
@@ -26,7 +28,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 
-test_mode = 1
+test_mode = 0
 #global consts
 test_tag_id = 0
 distanceScale = 1.0
@@ -283,15 +285,16 @@ while True:
     else:
         ret_test, frame_test = cap.read()
         print(f"Frame x:{frame_test.shape[0]}, y: {frame_test.shape[1]}")
-        if(int(frame_test.shape[0]) == 1920):
+        if(int(frame_test.shape[0]) == 1080):
             arr.append(index)
     cap.release()
     index += 1
+print(arr)
 if(len(arr) != 2):
     print("[ camera ] Connect both cameras")
     exit(0)
 cam_id = arr[0]
-cam_id_bottom = [1]
+cam_id_bottom = arr[1]
 cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
     print("[ camera ] Cannot open top")
@@ -515,7 +518,9 @@ def halt_movment():
     ser.write(str.encode('x'))
     #wait for reply up to 0.3 seconds
     for i in range(6):
-        if(ser.read(2) != ''):
+        data = ser.read(2)
+        print(data.decode().strip())
+        if(data.decode().strip() != ''):
             distance_remaining = struct.unpack('>h', ser.read(2))
             print(distance_remaining)
             return distance_remaining
@@ -573,13 +578,20 @@ def process_april_tags(frame):
     hei = img_size[0]
     angleStore = 0
     xStore = 0
+    eulerRotx = 0
     distanceStore = 0
 
     for i in result: #for each detected aprilTag. 
         if(True):#i.tag_id == test_tag_id):#):
+            x_offset = 0
             cent = i.center
-            #Pose_R = i.pose_R
+            Pose_R = i.pose_R
             Pose_T = i.pose_t
+            rot_matrix = R.from_matrix(Pose_R)
+            eulers = rot_matrix.as_euler('zxy', degrees=True)
+            print("Euler Angles: ")
+            print(eulers)
+            eulerRotx += eulers[1]
             # print(i)
             unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
             #print(f"relative angle: {Pose_R}")
@@ -604,8 +616,9 @@ def process_april_tags(frame):
     if(len(result) > 0):
         angleStore = int(angleStore/len(result))
         distanceStore = int(distanceStore/len(result))
-        xStore = int(xStore/len(result))
-    return x_offset, angleStore, distanceStore
+        xStore = float(xStore/len(result))
+        eulerRotx = int(eulerRotx/len(result))
+    return xStore, eulerRotx, angleStore, distanceStore
 
 def calcPath(grid, start_x, start_y, goal_x, goal_y):
     start = grid.node(start_x, start_y)
@@ -750,7 +763,7 @@ print("STARTING PROGRAM")
 print()
 
 halt_movment()
-job = 0 #nothing
+job = 5 #nothing
 start = time.time()
 while True:
     # Capture frame-by-frame
@@ -759,11 +772,20 @@ while True:
             job = 9
             print(f"JOB: {job}")
         elif(job == 5):#check april location
-             ret, frame_top = cap.read()
-             if(ret):
-                x_offset, angle, distance = process_april_tags(frame_top)  
-                print(f"X-OFFSET: {x_offset}, Distance: {distance}")  
+            ret, frame_top = cap.read()
+            if(ret):
+                x_offset, euler_rotation_x, angle, distance = process_april_tags(frame_top)  
+                print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
                 cv.imshow('frame', frame_top) 
+                cv.waitKey(1)
+
+                send_angle(euler_rotation_x*2)
+                time.sleep(3)
+                if(x_offset > 0):
+                    send_distance(x_offset*100, 'b')
+                else:
+                    send_distance(x_offset*100, 'w')
+                time.sleep(3)
         elif(job  == 6):
 
             ret, frame_top = cap.read()
@@ -920,10 +942,11 @@ while True:
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
-        print(e)
+        print("Error"+str(e))
         break
 # When everything done, release the capture
 cap.release()
+cap_bottom.release()
 cv.destroyAllWindows()
 plt.waitforbuttonpress()
 if(test_mode == 0):     
