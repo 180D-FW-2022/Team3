@@ -35,6 +35,11 @@ double movLin_mmStep = 0.3638996139; //mm per step
 double movLin_stepMM = 2.7480106101; //steps per mm
 double rot_stepDeg = 16; //steps per degree
 
+float bat_volt = 0.0;
+
+int distance = 0;
+
+
 #define batReadTime 1000
 #define COMM_TIMEOUT 100
 //COLORS
@@ -90,7 +95,7 @@ void setup() {
   analogReference(EXTERNAL);
   u8g2.begin();
   portSetup();
-  Timer1.initialize(10000); //every 10ms run interrupt
+  Timer1.initialize(500000); //every 500ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
   Serial.begin(115200);
   delay(3000);
@@ -164,7 +169,7 @@ if(Serial.available()>0){
 }
 
 void readAndPrintVoltage(void){
- float bat_volt = (analogRead(A3)/1023.0)*(30.5)*(1.0); //last value is adjustment factor for ref voltage
+  bat_volt = (analogRead(A3)/1023.0)*(30.5)*(1.0); //last value is adjustment factor for ref voltage
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
   u8g2.drawStr(0,10, "Total Voltage:");
@@ -172,9 +177,14 @@ void readAndPrintVoltage(void){
   u8g2.sendBuffer();
 }
 
-void interruptHandler(void){ 
-  
+void interruptHandler(void){  //Periodic information logging 
+  Serial.write('p');
+  Serial.write((byte) (int(bat_volt*100)>>8));
+  Serial.write((byte) (int(bat_volt*100)));
+  Serial.write((byte) ((distance)>8));
+  Serial.write((byte) (distance));
   }
+
 
 void portSetup(){ //SETUP INPUT/OUTPUT pins.
   
@@ -332,6 +342,7 @@ void rotateRobot(double deg, bool cw, int spd){
 //dirColor : RBGW, Red Black Green White arm direciton.
 // R = 1, B = 2 ....
 void moveRobot(double distanceMM, int dirColor, int spd){ 
+  distance = 0;
   long int steps = long(movLin_stepMM * double(distanceMM));
   if(dirColor == 1 || dirColor == 2){ //Red or Black
     setMotorDir(1, clockwise); //for black dir
@@ -366,23 +377,23 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         }
         bool isHalt = 0;
         for(long int j = 0L; j < (steps-200L); j++){
-          if(isHalt == 0){
-        stepMotor(2, spd);
-        stepMotor(4, spd);
-          }else{
-            break;
-          }
-        if(Serial.available() > 0){
+          if(Serial.available() > 0){
           char d = Serial.read();
           if(d == 'x'){
             isHalt = 1;
-            int distRemainCM = (((steps-100L)-j)*movLin_mmStep)/10;
-            Serial.write((byte) (distRemainCM>>8));
-            Serial.write((byte) (distRemainCM));
+            Serial.write('s');
             break;
             break;
           }
         }
+          if(isHalt == 0){
+            distance = (((steps-100L)-j)*movLin_mmStep)/10;
+         stepMotor(2, spd);
+         stepMotor(4, spd);
+          }else{
+            break;
+          }
+        
         }
         if(!isHalt){
         for(int i = 0; i < 20; i++){
@@ -420,23 +431,22 @@ void moveRobot(double distanceMM, int dirColor, int spd){
         }
         bool isHalt = 0;
         for(long j = 0L; j < steps-(200L); j++){
+          if(Serial.available() > 0){
+            char d = Serial.read();
+            if(d == 'x'){
+              isHalt = 1;
+              Serial.write('s');
+              break;
+              break;
+            }
+          }
           if(isHalt == 0){
+          distance = (((steps-100L)-j)*movLin_mmStep)/10;
         stepMotor(1, spd);
         stepMotor(3, spd);
           }else{
             break;
             }
-        if(Serial.available() > 0){
-          char d = Serial.read();
-          if(d == 'x'){
-            isHalt = 1;
-            int distRemainCM = (((steps-100L)-j)*movLin_mmStep)/10;
-            Serial.write((byte) (distRemainCM>>8));
-            Serial.write((byte) (distRemainCM));
-            break;
-            break;
-          }
-        }
         }
         if(!isHalt){
         for(int i = 0; i < 20; i++){

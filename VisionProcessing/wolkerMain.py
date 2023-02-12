@@ -271,7 +271,7 @@ if(test_mode == 0):
         raise IOError("[arduino ] Not found")
     if len(arduino_ports) > 1:
         warnings.warn('[arduino ] Multiple found - using the first')
-    ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.5)
+    ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.1)
     time.sleep(2)
     print(ser.name)         # check which port was really used
 
@@ -435,14 +435,14 @@ def obstacle_avoid():
 
             # finding average depth of region represented by the largest contour 
             mask2 = np.zeros_like(mask)
-            cv.drawContours(mask2, cnts, 0, (255), -1)
+           # cv.drawContours(mask2, cnts, 0, (255), -1)
 
             # Calculating the average depth of the object closer than the safe distance
             depth_mean, _ = cv.meanStdDev(depth_map, mask=mask2)
             return float(depth_mean)
 
     else:
-        cv.putText(output_canvas, "SAFE!", (100,100),1,3,(0,255,0),2,3)
+      #  cv.putText(output_canvas, "SAFE!", (100,100),1,3,(0,255,0),2,3)
         return -1
 
     cv.imshow('output_canvas',output_canvas)
@@ -496,8 +496,8 @@ def processStereo(imgR, imgL):
 
     depth_value = obstacle_avoid()
     
-    cv.resizeWindow("disp",700,700)
-    cv.imshow("disp",disparity)
+   # cv.resizeWindow("disp",700,700)
+   # cv.imshow("disp",disparity)
     
     return depth_value
 #end
@@ -513,9 +513,9 @@ def rescale_frame(frame, percent=75):
 def halt_movment():
     ser.write(str.encode('x'))
     ser.write(str.encode('x'))
-    #wait for reply up to 0.3 seconds
-    data = ser.read(2)
-    print(int.from_bytes(data, "little"))
+    if(ser.read(1) == b'\x73'):
+        return 1
+
         #print(data.decode().strip())
         #if(data.decode().strip() != '' and len(data.decode().strip()) == 2):
         # try:
@@ -527,7 +527,7 @@ def halt_movment():
         # elif(data.decode().strip() != '' and len(data.decode().strip()) == 1):
         #     if(data.decode().strip() == 'a'):
         #         print("[position]: Upon obstacle stop location lost")
-    return -1
+    return 0
 
 
 
@@ -615,8 +615,8 @@ def process_april_tags(frames):
 
                 #print("[ angle  ]: "+str(angle))
                 #print("[distance]: "+str(distance))
-                cv.circle(frame,(int(cent[0]), int(cent[1])), 100, (0,0,255), -1)
-                cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 10, cv.LINE_4)
+                cv.circle(frame,(int(cent[0]), int(cent[1])), 50, (0,0,255), -1)
+                cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 8, cv.LINE_4)
     if(total_results > 0):
         angleStore = int(angleStore/total_results)
         distanceStore = int(distanceStore/total_results)
@@ -783,15 +783,10 @@ while True:
                 if(ret):
                     countFrame+=1
                     frames_top.append(frame_top)
-            while (countFrame < 10):
-                ret, frame_top = cap_bottom.read()
-                if(ret):
-                    countFrame+=1
-                    frames_top.append(frame_top)
             x_offset, euler_rotation_x, angle, distance = process_april_tags(frames_top)  
             print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
-            cv.imshow('frame', frames_top[0]) 
-            cv.waitKey(1)
+            #cv.imshow('frame', frames_top[0]) 
+            #cv.waitKey(1)
         elif(job  == 6):
             ret, frame_top = cap.read()
             ret_b, frame_bottom = cap_bottom.read()
@@ -833,7 +828,6 @@ while True:
             arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             if(len(arr) > 0):
                 updateDisplay(arr)
-                
                 distances = calcMovesDistance(arr)
                 angles = calcMovesHeading(arr)                
                 current_step = 0
@@ -950,6 +944,11 @@ while True:
                 movementDone = True 
                 moveActionTimestamp = time.time()
                 time.sleep(0.1)
+        elif(b'\x70' == readS):#logging of current position, battery voltage. 
+            readPos = ser.read(2)
+            readBat = ser.read(2)
+            print(int.from_bytes(readPos, "little"))
+            print(int.from_bytes(readBat, "little"))
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
