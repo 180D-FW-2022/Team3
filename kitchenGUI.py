@@ -147,10 +147,10 @@ class KitchenGUI(MDApp):
         firebase.ref.child("newTableNumber").set(tableNumber)
 
     def WOKerReady(self, event):
-        if self.initial[1] == True:
-            print("initial2")
-            self.initial[1] = False
-            return
+        # if self.initial[1] == True:
+        #     print("initial2")
+        #     self.initial[1] = False
+        #     return
         if event.data == True:
             if firebase.ref.child("readyOrders").get() == None:
                 print("return")
