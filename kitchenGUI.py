@@ -22,6 +22,9 @@ import asyncio
 
 # import kitchenNode
 
+class customEvent:
+    data: True
+
 class KitchenGUI(MDApp):
     # mainKitchenNode = kitchenNode.KitchenNode()
     orderList = []
@@ -30,7 +33,8 @@ class KitchenGUI(MDApp):
     # latestOrder = []
     # prevNotReadyOrderTables = []
     orderNumbers = deque()
-    
+
+
     def build(self):
         Window.bind(on_request_close=self.on_request_close)
 
@@ -98,6 +102,7 @@ class KitchenGUI(MDApp):
         if event.data == None:
             return
         if "cost" in event.data.keys():
+            print("if")
             latestItem = event.data
             # print(latestItem)
             newTableNumber = latestItem["tableNumber"]
@@ -116,6 +121,7 @@ class KitchenGUI(MDApp):
                 "order" + str(newOrderNumber), latestItem
              ) )
         else:
+            print("else")
             for i in event.data.items():
                 latestItem = i[1]
                 newTableNumber = latestItem["tableNumber"]
@@ -150,7 +156,7 @@ class KitchenGUI(MDApp):
         # if self.initial[1] == True:
         #     print("initial2")
         #     self.initial[1] = False
-        #     return
+        print(event.data)
         if event.data == True:
             if firebase.ref.child("readyOrders").get() == None:
                 print("return")
@@ -196,6 +202,11 @@ class KitchenGUI(MDApp):
     async def check(self, i):
         firebase.ref.child("readyOrders/order"+ str(i[0][5:])).set(i[1])
         firebase.ref.child("sentOrders/order" + str(i[0][5:])).delete()
+        event2 = customEvent()
+        event2.data = firebase.ref.child("WOKerReady").get()
+        print(event2.data)
+        self.WOKerReady(event2)
+        
 
     def on_row_press(self, instance_table, instance_row):
         rowCount = 0
