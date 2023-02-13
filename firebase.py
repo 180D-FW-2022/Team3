@@ -22,7 +22,7 @@ def resetFirebase():
     })
 
 def getCurrentTable():
-    return (ref.child("tableNumber").get())
+    return (ref.child("newTableNumber").get())
 
 def isKitchenReady():
     return (ref.child("newTableReady").get())
