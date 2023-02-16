@@ -33,11 +33,11 @@
 
 double movLin_mmStep = 0.3638996139; //mm per step
 double movLin_stepMM = 2.7480106101; //steps per mm
-double rot_stepDeg = 16; //steps per degree
+double rot_stepDeg = 15.1; //steps per degree
 
 float bat_volt = 0.0;
 
-int distance = 0;
+int distance_report = 0;
 
 
 #define batReadTime 1000
@@ -95,7 +95,7 @@ void setup() {
   analogReference(EXTERNAL);
   u8g2.begin();
   portSetup();
-  Timer1.initialize(500000); //every 500ms run interrupt
+  Timer1.initialize(100000); //every 500ms run interrupt
   Timer1.attachInterrupt(interruptHandler);
   Serial.begin(115200);
   delay(3000);
@@ -179,10 +179,10 @@ void readAndPrintVoltage(void){
 
 void interruptHandler(void){  //Periodic information logging 
   Serial.write('p');
-  Serial.write((byte) (int(bat_volt*100)>>8));
-  Serial.write((byte) (int(bat_volt*100)));
-  Serial.write((byte) ((distance)>8));
-  Serial.write((byte) (distance));
+  Serial.write((lowByte(int(bat_volt*100))));
+  Serial.write((highByte(int(bat_volt*100))));
+  Serial.write((lowByte(int(distance_report))));
+  Serial.write((highByte(int(distance_report))));
   }
 
 
@@ -342,7 +342,7 @@ void rotateRobot(double deg, bool cw, int spd){
 //dirColor : RBGW, Red Black Green White arm direciton.
 // R = 1, B = 2 ....
 void moveRobot(double distanceMM, int dirColor, int spd){ 
-  distance = 0;
+  distance_report = 0;
   long int steps = long(movLin_stepMM * double(distanceMM));
   if(dirColor == 1 || dirColor == 2){ //Red or Black
     setMotorDir(1, clockwise); //for black dir
@@ -387,7 +387,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
           }
         }
           if(isHalt == 0){
-            distance = (((steps-100L)-j)*movLin_mmStep)/10;
+            distance_report = (((steps-100L)-j)*movLin_mmStep)/10;
          stepMotor(2, spd);
          stepMotor(4, spd);
           }else{
@@ -441,7 +441,7 @@ void moveRobot(double distanceMM, int dirColor, int spd){
             }
           }
           if(isHalt == 0){
-          distance = (((steps-100L)-j)*movLin_mmStep)/10;
+          distance_report = (((steps-100L)-j)*movLin_mmStep)/10;
         stepMotor(1, spd);
         stepMotor(3, spd);
           }else{
@@ -557,6 +557,7 @@ String checkForSerialAngleDist(){
   }
 
 void sendDone(){
+  distance_report = 0;
   Serial.write('a');
   delay(10);
   }

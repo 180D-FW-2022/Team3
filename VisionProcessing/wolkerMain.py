@@ -1,6 +1,8 @@
 from pupil_apriltags import Detector
 import cv2 as cv
 
+import os
+
 import numpy as np
 import time
 import math
@@ -27,6 +29,10 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+#custom classes improt
+from robotClass import Robot
+#end
+
 
 test_mode = 0
 #global consts
@@ -46,6 +52,8 @@ movementDone = True
 moveActionTimestamp = time.time()
 stepCounter = 0
 
+position_report = 0
+battery_report = 0
 
 current_robotDir = 0 #90, 180, 270.
 current_robotX = 0
@@ -54,6 +62,8 @@ table_dict = dict()
 table_count = 0
 home_coords = np.array([0,0]).astype(int)
 
+
+robot = Robot()
 
 cred = credentials.Certificate("firebase_key.json")
 default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
@@ -64,10 +74,10 @@ def __wipeFirebase():
     ref.delete()    
 
 def getCurrentTable():
-    return (ref.child("tableNumber").get())
+    return (ref.child("newTableNumber").get())
 
 def isKitchenReady(): #True when current table ready. Becomes false when woker ready set true 
-    return (ref.child("kitchenReady").get())
+    return (ref.child("newTableReady").get())
 
 #set WOKer to ready (True)
 def WOKerReadyTrue():
@@ -84,33 +94,34 @@ def getMap():
 matrix_size = 20
 
 fetched_map = getMap().split(',')
+fetched_map.reverse()
 fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size)).astype(int)
-grid_raw = fetched_map_matrix.astype(int)
+grid_raw = fetched_map_matrix.astype(int).copy()
 #print(fetched_map_matrix)
 
-grid_raw = np.array([
-            [4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
-            ]).astype(int)
-fetched_map_matrix = grid_raw.copy()
+# grid_raw = np.array([
+#             [4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
+#             ]).astype(int)
+# fetched_map_matrix = grid_raw.copy()
 
 #print(grid_raw)
 print((grid_raw).shape)
@@ -123,6 +134,7 @@ grid_raw[grid_raw == -1] = 1
 grid_raw[grid_raw == -2] = 0
 
 grid_raw_margined = grid_raw.copy()
+print(grid_raw_margined)
 # grid_loaded = Grid(matrix=grid_raw_margined)
 
 
@@ -137,6 +149,8 @@ for row in range(matrix_size):
         if(fetched_map_matrix[row][column] == 4):
             home_coords[0] = column
             home_coords[1] = row
+            current_robotX = column
+            current_robotY = row
             print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
 
 
@@ -313,7 +327,10 @@ if(average[0] < 5.0):
     temp = cam_id_bottom
     cam_id_bottom = cam_id
     cam_id = temp
-    
+
+print("PLEASE REMOVE BOTTOM CAP and press enter")
+input()
+
 cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
     print("[ camera ] Cannot open top")
@@ -322,9 +339,6 @@ cap_bottom = cv.VideoCapture(cam_id_bottom)
 if not cap_bottom.isOpened():
     print("[ camera ] Cannot open bottom")
     exit()
-
-print("PLEASE REMOVE BOTTOM CAP and press enter")
-input()
 #video init end
 
 #APTag detector init.
@@ -389,6 +403,7 @@ min_depth = 0 # minimum distance the setup can measure (in cm)
 depth_thresh = 200.0 # Threshold for SAFE distance (in cm)
 
 # Reading the stored the StereoBM parameters
+
 cv_file = cv.FileStorage("./depthEst.xml", cv.FILE_STORAGE_READ)
 numDisparities = int(cv_file.getNode("numDisparities").real())
 blockSize = int(cv_file.getNode("blockSize").real())
@@ -422,7 +437,7 @@ def obstacle_avoid():
     mask = cv.inRange(depth_map,10,depth_thresh)
 
     # Check if a significantly large obstacle is present and filter out smaller noisy regions
-    if np.sum(mask)/255.0 > 0.005*mask.shape[0]*mask.shape[1]:
+    if np.sum(mask)/255.0 > 0.001*mask.shape[0]*mask.shape[1]:
 
         # Contour detection 
         contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -435,7 +450,7 @@ def obstacle_avoid():
 
             # finding average depth of region represented by the largest contour 
             mask2 = np.zeros_like(mask)
-           # cv.drawContours(mask2, cnts, 0, (255), -1)
+            cv.drawContours(mask2, cnts, 0, (255), -1)
 
             # Calculating the average depth of the object closer than the safe distance
             depth_mean, _ = cv.meanStdDev(depth_map, mask=mask2)
@@ -446,7 +461,6 @@ def obstacle_avoid():
         return -1
 
     cv.imshow('output_canvas',output_canvas)
-
 
 def processStereo(imgR, imgL):
     global stereo, output_canvas, depth_map
@@ -769,12 +783,33 @@ print()
 halt_movment()
 job = 0 #nothing
 start = time.time()
+lastSerRead = time.time()
 while True:
+   # os.system('clear')
     # Capture frame-by-frame
     try:
         if(job == 0):
-            job = 9
-            print(f"JOB: {job}")
+            WOKerReadyTrue()
+            #print(isKitchenReady())
+            if(isKitchenReady() == True):
+                print("Kitchen Ready")
+                table_to_go_to = int(getCurrentTable())
+                robotReceivedTrue()
+                print(table_to_go_to)
+                #print(table_num)
+                if(table_to_go_to <= table_count):
+                    headingTableX = table_dict[table_to_go_to][0]
+                    headingTableY = table_dict[table_to_go_to][1]
+                    job = 10
+                    print(f"JOB: {job}")
+                else:
+                    print("Table doesn't exist")
+            else:
+                print("No action need to be done")
+                time.sleep(2)
+            headingTableX = table_dict[0][0]
+            headingTableY = table_dict[0][1]
+            job = 10
         elif(job == 5):#check april location
             countFrame = 0
             frames_top = []
@@ -788,16 +823,20 @@ while True:
             #cv.imshow('frame', frames_top[0]) 
             #cv.waitKey(1)
         elif(job  == 6):
-            ret, frame_top = cap.read()
-            ret_b, frame_bottom = cap_bottom.read()
-            distance_to_closest = None
-            procseedStero = 100
-            if ret and ret_b:
-                imgForStereo = frame_top
-                imgBotForStereo = frame_bottom
-                procseedStero = processStereo(frame_top, frame_bottom)
-                print(f"Stereo Returned Object: {procseedStero}")
-            distance_to_closest = procseedStero #cm
+            distance_to_closest = 0
+            procseedStero = 0
+            runCount = 0
+            while(runCount<2):
+                ret, frame_top = cap.read()
+                ret_b, frame_bottom = cap_bottom.read()
+                if ret and ret_b:
+                    runCount+=1
+                    imgForStereo = frame_top
+                    imgBotForStereo = frame_bottom
+                    procseedStero = processStereo(frame_top, frame_bottom)
+                    distance_to_closest+=procseedStero
+                    print(f"Stereo Returned Object: {procseedStero}")
+            distance_to_closest = distance_to_closest/2 #cm
             if(distance_to_closest < 90): #make sure to only call in linear movment. 
                 print(f"Obstacle @: {distance_to_closest}")
                 rem_dist = halt_movment()
@@ -806,21 +845,16 @@ while True:
                 if(rem_dist != -1):
                     if(current_robotDir == 0):
                         current_robotY -= int(rem_dist/100)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                     elif(current_robotDir == 90):
                         current_robotX += int(rem_dist/100)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                     elif(current_robotDir == -90):
                         current_robotX -= int(rem_dist/100)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                     elif(current_robotDir == 180):
                         current_robotY += int(rem_dist/100)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                    print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
         elif(job == 9):
             #check for new data.
             print(table_dict[0])
-            headingTableX = table_dict[0][0]
-            headingTableY = table_dict[0][1]
             job = 10
             print(f"JOB: {job}")
         elif(job == 10):
@@ -843,19 +877,16 @@ while True:
                         print("moving "+str(distances[i])+"m")
                         send_distance(distances[i]*100)
                         if(current_robotDir == 0):
-                            current_robotY += int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                            current_robotY += int(distances[i]*2)        
                         elif(current_robotDir == 90):
                             current_robotX -= int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         elif(current_robotDir == -90):
                             current_robotX += int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         elif(current_robotDir == 180):
                             current_robotY -= int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         print()
-                        job = 6
+                        #job = 6
                         current_step += 1
                     else:
                         print("rotating "+str(angles[i])+"°")
@@ -900,16 +931,13 @@ while True:
                         send_distance(distances[i]*100)
                         if(current_robotDir == 0):
                             current_robotY += int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         elif(current_robotDir == 90):
                             current_robotX -= int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         elif(current_robotDir == -90):
                             current_robotX += int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         elif(current_robotDir == 180):
                             current_robotY -= int(distances[i]*2)
-                            print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
                         print()
                         current_step += 1
                     else:
@@ -926,29 +954,48 @@ while True:
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
                 else:
-                    job = 1 #reset - does nothing
+                    job = 15
                     print(f"JOB: {job}")
-            
+        elif(job == 15):
+            if(movementDone == True):
+                send_angle(-1*current_robotDir)
+                current_robotDir = 0
+                movementDone = False
+                moveActionTimestamp = time.time()
+                print("[movement] Start")
+                job = 16
+        elif(job == 16):
+            if(movementDone == True):
+                current_robotX = home_coords[0]
+                current_robotY = home_coords[1]
+                job = 0
+        else:
+            job = 0 #reset
+            print(f"JOB: {job}")
+    
             
         
         #check if movmement is done - arduino sends 0x61 on move done. 
         readS = 0x00
-        if(test_mode == 0):
+        if(test_mode == 0 and ser.inWaiting() > 0):
             readS = ser.read(1)
             print(readS)
         if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
             print("[WARNING] TIMEOUT")
         if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
-                print("[movement] Done")
-                print()
-                movementDone = True 
-                moveActionTimestamp = time.time()
-                time.sleep(0.1)
+            print("[movement] Done")
+            print()
+            movementDone = True 
+            moveActionTimestamp = time.time()
+            time.sleep(0.1)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
-            readPos = ser.read(2)
+            readS = 0x00
             readBat = ser.read(2)
-            print(int.from_bytes(readPos, "little"))
-            print(int.from_bytes(readBat, "little"))
+            readPos = ser.read(2)
+            position_report = int.from_bytes(readPos, "little")
+            battery_report = int.from_bytes(readBat, "little")
+            print(f"Distance Remaining {position_report}cm")
+            print(f"Battery Voltage: {battery_report/100}")
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
