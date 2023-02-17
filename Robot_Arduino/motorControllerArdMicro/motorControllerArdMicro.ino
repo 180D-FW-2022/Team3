@@ -1,6 +1,7 @@
 //********** INCLUDES *************
 #include <TimerOne.h>
 #include <U8g2lib.h>
+#include <AccelStepper.h>
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
@@ -41,6 +42,8 @@ int distance_report = 0;
 
 
 #define batReadTime 1000
+#define posReadTime 500
+
 #define COMM_TIMEOUT 100
 //COLORS
 //ENABLE PIN: RED   /  TURQUISE / GREY
@@ -52,14 +55,9 @@ int distance_report = 0;
 #define stepMargin 200L
 #define stepMarginRot 200
 
-#define SPD_1 2000
-#define SPD_2 1500
-#define SPD_3 1100
-#define SPD_linear 500
+#define SPD_linear 1200
 
-#define SPD_rot_1 1600
-#define SPD_rot_2 1000
-#define SPD_rotate 600
+#define SPD_rotate 800
 
 
 
@@ -84,10 +82,14 @@ int distance_report = 0;
 #define clockwise  true
 #define counterCW  false
 //******* GLOBAL VARIABLES **********
-int motorStepsArr[4] = {0,0,0,0}; //number of steps left for each motor.
+AccelStepper stepper1(AccelStepper::DRIVER, MOTOR_1_STEP, MOTOR_1_DIR);
+AccelStepper stepper2(AccelStepper::DRIVER, MOTOR_2_STEP, MOTOR_2_DIR);
+AccelStepper stepper3(AccelStepper::DRIVER, MOTOR_3_STEP, MOTOR_3_DIR);
+AccelStepper stepper4(AccelStepper::DRIVER, MOTOR_4_STEP, MOTOR_4_DIR);
 
 unsigned long last_volt_time = 0;
-
+unsigned long last_pos_time = 0;
+int isInMotion = 0;
 U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
 
 void setup() {
@@ -95,19 +97,35 @@ void setup() {
   analogReference(EXTERNAL);
   u8g2.begin();
   portSetup();
-  Timer1.initialize(100000); //every 500ms run interrupt
-  Timer1.attachInterrupt(interruptHandler);
+
+  stepper1.setMaxSpeed(1000);
+  stepper1.setAcceleration(1200);
+  
+  stepper2.setMaxSpeed(1000);
+  stepper2.setAcceleration(1200);
+
+  stepper3.setMaxSpeed(1000);
+  stepper3.setAcceleration(1200);
+  
+  stepper4.setMaxSpeed(1000);
+  stepper4.setAcceleration(1200);
+
   Serial.begin(115200);
-  delay(3000);
+  delay(1000);
 
 }
 
 void loop() {
-  if(millis()-last_volt_time > (unsigned long)batReadTime){
+  if(millis()-last_volt_time > (unsigned long)batReadTime && isInMotion == 0){
     last_volt_time = millis();
     readAndPrintVoltage();
   }
+  if(millis()-last_pos_time > (unsigned long)posReadTime){
+    last_pos_time = millis();
+    sendPositionInfo(); //TODO CONVERT STEPS LOCATION TO POS INFO.
+  }
 
+  if(isInMotion == 0){
   String command = checkForSerialAngleDist();
   if(command != "-1"){
     setMotorTorqueAll(1);
@@ -118,12 +136,8 @@ void loop() {
       if(angle != -1){
         if(angle>0){ 
           rotateRobot(a_toPass, clockwise, SPD_rotate);
-          delay(200);
-          sendDone();
         }else{
           rotateRobot(a_toPass, counterCW, SPD_rotate);
-          delay(200);
-          sendDone();
         }
         }
       }else if(command[0] == 'r' || command[0] == 'b' || command[0] == 'g' || command[0] == 'w'){
@@ -141,31 +155,39 @@ void loop() {
         int distance = command.toInt();
         double d_toPass = abs(distance)*10.0;
         moveRobot(d_toPass, armDir, SPD_linear);
-        delay(50);
-        sendDone();
         }
-        setMotorTorqueAll(0);
     }
-    delay(100);
-    command = "";
-  //delay(2000);
-
-#ifdef DEBUG_SER
-
-if(Serial.available()>0){
-  String incomingString = Serial.readString();
-  int toTurn = incomingString.toInt();
-  Serial.println(toTurn);
-  if(toTurn > 0){
-  moveRobot(toTurn, 1, SPD_linear);
-  }else{
-    toTurn = -1*toTurn;
-    moveRobot(toTurn, 3, SPD_linear);
+  }else if(Serial.available() > 0){
+    char d = Serial.read();
+    if(d == 'x'){
+      stepper1.stop();
+      stepper2.stop();
+      stepper3.stop();
+      stepper4.stop();
     }
   }
-
-#endif
+  //delay(2000);
   
+
+if(isInMotion == 1 and checkAllSteppersStates() == 1){
+  isInMotion = 0;
+  sendDone();
+  setMotorTorqueAll(0);
+}  
+
+stepper1.run();
+stepper2.run();
+stepper3.run();
+stepper4.run();
+
+}
+
+bool checkAllSteppersStates(){
+  if(!stepper1.isRunning() && !stepper2.isRunning() && !stepper3.isRunning() && !stepper4.isRunning())
+  {
+    return 1;
+  }
+  return 0;
 }
 
 void readAndPrintVoltage(void){
@@ -177,7 +199,7 @@ void readAndPrintVoltage(void){
   u8g2.sendBuffer();
 }
 
-void interruptHandler(void){  //Periodic information logging 
+void sendPositionInfo(void){  //Periodic information logging 
   Serial.write('p');
   Serial.write((lowByte(int(bat_volt*100))));
   Serial.write((highByte(int(bat_volt*100))));
@@ -240,229 +262,61 @@ void setMotorTorqueAll(bool setEnabled){
   setMotorTorque(4, setEnabled);
   }
 
-void stepMotor(int motorID, int spdDel){
-  if(motorID == 1){
-    digitalWrite(MOTOR_1_STEP, SET);
-    delayMicroseconds(spdDel);
-    digitalWrite(MOTOR_1_STEP, RESET);
-  }else if(motorID == 2){
-    digitalWrite(MOTOR_2_STEP, SET);
-    delayMicroseconds(spdDel);
-    digitalWrite(MOTOR_2_STEP, RESET);
-  }else if(motorID == 3){ 
-    digitalWrite(MOTOR_3_STEP, SET);
-    delayMicroseconds(spdDel);
-    digitalWrite(MOTOR_3_STEP, RESET);
-  }else if(motorID == 4){
-    digitalWrite(MOTOR_4_STEP, SET);
-    delayMicroseconds(spdDel);
-    digitalWrite(MOTOR_4_STEP, RESET);
-  }
-  }
-
-void setMotorDir(int motorID, bool cw){
-if(motorID == 1){
-    if(cw){
-    digitalWrite(MOTOR_1_DIR, RESET);
-    }else{
-    digitalWrite(MOTOR_1_DIR, SET);
-    }
-}else if(motorID == 2){
-    if(cw){
-    digitalWrite(MOTOR_2_DIR, RESET);
-    }else{
-    digitalWrite(MOTOR_2_DIR, SET);
-    }
-}else if(motorID == 3){
-    if(cw){
-    digitalWrite(MOTOR_3_DIR, RESET);
-    }else{
-    digitalWrite(MOTOR_3_DIR, SET);
-    }
-}else if(motorID == 4){
-   if(cw){
-   digitalWrite(MOTOR_4_DIR, RESET);
-   }else{
-   digitalWrite(MOTOR_4_DIR, SET);
-   }
-}
-}
 
 void rotateRobot(double deg, bool cw, int spd){
+  stepper1.setCurrentPosition(0);
+  stepper2.setCurrentPosition(0);
+  stepper3.setCurrentPosition(0);
+  stepper4.setCurrentPosition(0);
+  isInMotion = 1;
   int steps = int(rot_stepDeg * deg);
-  
-  setMotorDir(1, cw);
-  setMotorDir(2, cw);
-  setMotorDir(3, cw);
-  setMotorDir(4, cw);
-  if(steps<stepMarginRot){
-  for(int i = 0; i < steps; i++){
-  stepMotor(1, spd);
-  stepMotor(2, spd);
-  stepMotor(3, spd);
-  stepMotor(4, spd);
+  int dir = -1;
+  if(cw == 0){
+    dir = 1;
   }
-  }else{
+  stepper1.setMaxSpeed(spd);
+  stepper2.setMaxSpeed(spd);
+  stepper3.setMaxSpeed(spd);
+  stepper4.setMaxSpeed(spd);
+  stepper1.move(dir*steps);
+  stepper2.move(dir*steps);
+  stepper3.move(dir*steps);
+  stepper4.move(dir*steps);
 
-    for(int i = 0; i < 50; i++){
-  stepMotor(1, SPD_rot_1);
-  stepMotor(2, SPD_rot_1);
-  stepMotor(3, SPD_rot_1);
-  stepMotor(4, SPD_rot_1);
-  }
-  for(int i = 0; i < 50; i++){
-  stepMotor(1, SPD_rot_2);
-  stepMotor(2, SPD_rot_2);
-  stepMotor(3, SPD_rot_2);
-  stepMotor(4, SPD_rot_2);
-  }
-  for(int i = 0; i < (steps-200); i++){
-  stepMotor(1, spd);
-  stepMotor(2, spd);
-  stepMotor(3, spd);
-  stepMotor(4, spd);
-  }
-  for(int i = 0; i < 50; i++){
-  stepMotor(1, SPD_rot_2);
-  stepMotor(2, SPD_rot_2);
-  stepMotor(3, SPD_rot_2);
-  stepMotor(4, SPD_rot_2);
-  }
-  for(int i = 0; i < 50; i++){
-  stepMotor(1, SPD_rot_1);
-  stepMotor(2, SPD_rot_1);
-  stepMotor(3, SPD_rot_1);
-  stepMotor(4, SPD_rot_1);
-  }
-    
-  }
 }
-
 // **moveRobot Notes**
 //dirColor : RBGW, Red Black Green White arm direciton.
 // R = 1, B = 2 ....
 void moveRobot(double distanceMM, int dirColor, int spd){ 
+  stepper1.setCurrentPosition(0);
+  stepper2.setCurrentPosition(0);
+  stepper3.setCurrentPosition(0);
+  stepper4.setCurrentPosition(0);
+  isInMotion = 1;
   distance_report = 0;
   long int steps = long(movLin_stepMM * double(distanceMM));
+  int dir1 = 1;
+  int dir2 = 1;
+  int dir3 = 1;
+  int dir4 = 1;
   if(dirColor == 1 || dirColor == 2){ //Red or Black
-    setMotorDir(1, clockwise); //for black dir
-    setMotorDir(2, counterCW); //for red dir
-    setMotorDir(3, counterCW); //for black dor
-    setMotorDir(4, clockwise); //for red dir
+      dir1 = -1;
+      dir2 = 1;
+      dir3 = 1;
+      dir4 = -1;
     }else{
-    setMotorDir(1, counterCW);
-    setMotorDir(2, clockwise);
-    setMotorDir(3, clockwise);
-    setMotorDir(4, counterCW);
+      dir1 = 1;
+      dir2 = -1;
+      dir3 = -1;
+      dir4 = 1;
       }
 
     if(dirColor == 1 || dirColor == 3){
-      if(steps<stepMargin){
-      for(int i = 0; i < steps; i++){
-        stepMotor(2, SPD_1);
-        stepMotor(4, SPD_1);
-        }
-      }else{
-        for(int i = 0; i < 50; i++){
-        stepMotor(2, SPD_1);
-        stepMotor(4, SPD_1);
-        }
-        for(int i = 0; i < 30; i++){
-        stepMotor(2, SPD_2);
-        stepMotor(4, SPD_2);
-        }
-        for(int i = 0; i < 20; i++){
-        stepMotor(2, SPD_3);
-        stepMotor(4, SPD_3);
-        }
-        bool isHalt = 0;
-        for(long int j = 0L; j < (steps-200L); j++){
-          if(Serial.available() > 0){
-          char d = Serial.read();
-          if(d == 'x'){
-            isHalt = 1;
-            Serial.write('s');
-            break;
-            break;
-          }
-        }
-          if(isHalt == 0){
-            distance_report = (((steps-100L)-j)*movLin_mmStep)/10;
-         stepMotor(2, spd);
-         stepMotor(4, spd);
-          }else{
-            break;
-          }
-        
-        }
-        if(!isHalt){
-        for(int i = 0; i < 20; i++){
-        stepMotor(2, SPD_3);
-        stepMotor(4, SPD_3);
-        }
-        for(int i = 0; i < 30; i++){
-        stepMotor(2, SPD_2);
-        stepMotor(4, SPD_2);
-        }
-        for(int i = 0; i < 50; i++){
-        stepMotor(2, SPD_1);
-        stepMotor(4, SPD_1);
-        }
-        }
-      } 
+      stepper2.move(dir2*steps);
+      stepper4.move(dir4*steps);
      }else{
-       if(steps<stepMargin){
-      for(int i = 0; i < steps; i++){
-        stepMotor(1, SPD_1);
-        stepMotor(3, SPD_1);
-        }
-      }else{
-        for(int i = 0; i < 50; i++){
-        stepMotor(1, SPD_1);
-        stepMotor(3, SPD_1);
-        }
-        for(int i = 0; i < 30; i++){
-        stepMotor(1, SPD_2);
-        stepMotor(3, SPD_2);
-        }
-        for(int i = 0; i < 20; i++){
-        stepMotor(1, SPD_3);
-        stepMotor(3, SPD_3);
-        }
-        bool isHalt = 0;
-        for(long j = 0L; j < steps-(200L); j++){
-          if(Serial.available() > 0){
-            char d = Serial.read();
-            if(d == 'x'){
-              isHalt = 1;
-              Serial.write('s');
-              break;
-              break;
-            }
-          }
-          if(isHalt == 0){
-          distance_report = (((steps-100L)-j)*movLin_mmStep)/10;
-        stepMotor(1, spd);
-        stepMotor(3, spd);
-          }else{
-            break;
-            }
-        }
-        if(!isHalt){
-        for(int i = 0; i < 20; i++){
-        stepMotor(1, SPD_3);
-        stepMotor(3, SPD_3);
-        }
-        for(int i = 0; i < 30; i++){
-        stepMotor(1, SPD_2);
-        stepMotor(3, SPD_2);
-        }
-        for(int i = 0; i < 50; i++){
-        stepMotor(1, SPD_1);
-        stepMotor(3, SPD_1);
-        }
-      }
-      }
+      stepper1.move(dir2*steps);
+      stepper3.move(dir4*steps);
       }
 }
 

@@ -37,6 +37,9 @@ class Robot:
     def rotate(self, rot):
         self.rot += rot
         self.leastAngleUpdate()
+    
+    def getRotation(self):
+        return self.rot
 
     def move(self, distance):
         if(self.rot == 0):
@@ -49,17 +52,18 @@ class Robot:
             self.y -= int(distance)
         
     def setPosition_xy(self, x, y):
-        self.position_x = x
-        self.position_y = y
+        self.x = x
+        self.y = y
     
     def setPosition_x(self,x):
-        self.position_x = x
+        self.x = x
 
     def setPosition_y(self,y):
-        self.position_x = y
+        self.y = y
 
     def getPosition_xy(self):
-        return (self.position_x, self.position_y)
+        return (self.x, self.y)
+    
     
     def printCurrentData(self):
         print(f"[ Robot ]: X:{self.x}, Y:{self.y}, Θ:{self.rot}")

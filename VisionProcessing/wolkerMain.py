@@ -55,9 +55,6 @@ stepCounter = 0
 position_report = 0
 battery_report = 0
 
-current_robotDir = 0 #90, 180, 270.
-current_robotX = 0
-current_robotY = 0
 table_dict = dict()
 table_count = 0
 home_coords = np.array([0,0]).astype(int)
@@ -143,14 +140,13 @@ for row in range(matrix_size):
         if(fetched_map_matrix[row][column]>=10):
             table_num = fetched_map_matrix[row][column] - 10
             if (table_num) not in table_dict:
-                table_dict[table_num] = [column, row]
-                print(f"Table {table_num} found x: {column}, y: {row}")
+                table_dict[table_num] = [column*0.5, row*0.5]
+                print(f"Table {table_num} found {table_dict[table_num]}")
                 table_count+=1
         if(fetched_map_matrix[row][column] == 4):
-            home_coords[0] = column
-            home_coords[1] = row
-            current_robotX = column
-            current_robotY = row
+            home_coords[0] = column*0.5
+            home_coords[1] = row*0.5
+            robot.setPosition_xy(home_coords[0], home_coords[1])
             print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
 
 
@@ -526,7 +522,6 @@ def rescale_frame(frame, percent=75):
 
 def halt_movment():
     ser.write(str.encode('x'))
-    ser.write(str.encode('x'))
     if(ser.read(1) == b'\x73'):
         return 1
 
@@ -644,7 +639,12 @@ def calcPath(grid, start_x, start_y, goal_x, goal_y):
     finder = AStarFinder(diagonal_movement=DiagonalMovement.never,  heuristic=null)
     path, runs = finder.find_path(start, end, grid)
    #print(grid.grid_str(path=path, start=start, end=end))
+    print(path)
     return path
+
+def calcPathRWU(grid, start_x, start_y, goal_x, goal_y):
+    print(f"startx: {start_x}, stary: {start_y}, goalx: {goal_x}, goaly: {goal_y}")
+    return calcPath(grid, int(2*start_x), int(2*start_y), int(2*goal_x), int(2*goal_y))
 
 def calcMovesDistance(path_arr):    
     arr = path_arr
@@ -859,7 +859,7 @@ while True:
             print(f"JOB: {job}")
         elif(job == 10):
             grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            arr = calcPathRWU(grid_loaded, robot.x, robot.y, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             if(len(arr) > 0):
                 updateDisplay(arr)
                 distances = calcMovesDistance(arr)
@@ -873,34 +873,21 @@ while True:
             if(movementDone == True):
                 if(current_step < len(angles)):
                     i=current_step
-                    if(angles[i] == 0):
+                    if(angles[i]-robot.getRotation() == 0):
                         print("moving "+str(distances[i])+"m")
                         send_distance(distances[i]*100)
-                        if(current_robotDir == 0):
-                            current_robotY += int(distances[i]*2)        
-                        elif(current_robotDir == 90):
-                            current_robotX -= int(distances[i]*2)
-                        elif(current_robotDir == -90):
-                            current_robotX += int(distances[i]*2)
-                        elif(current_robotDir == 180):
-                            current_robotY -= int(distances[i]*2)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
-                        print()
+                        robot.move(distance=distances[i])
                         #job = 6
                         current_step += 1
                     else:
-                        print("rotating "+str(angles[i])+"°")
-                        send_angle(angles[i])
-                        print()
-                        toSubtract = angles[i]
-                        current_robotDir += toSubtract
-                        current_robotDir = calcLeastAngle(current_robotDir)
-                        print(f"Current Heading: {current_robotDir}")
-                        for ind in range(len(angles)):
-                            angles[ind] = calcLeastAngle(angles[ind]-toSubtract)
+                        angle_to_rot = angles[i]-robot.getRotation()
+                        print("rotating "+str(angle_to_rot)+"°")
+                        send_angle(angle_to_rot)
+                        robot.rotate(angle_to_rot)
                     movementDone = False
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
+                    robot.printCurrentData()
                 else:
                     job = 12
                     print(f"JOB: {job}")
@@ -912,7 +899,7 @@ while True:
             headingTableX = home_coords[0]
             headingTableY = home_coords[1] #setNew data.
             grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPath(grid_loaded, current_robotX, current_robotY, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            arr = calcPathRWU(grid_loaded, robot.x, robot.y, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             if(len(arr) > 0):
                 updateDisplay(arr)
                 distances = calcMovesDistance(arr)
@@ -926,30 +913,16 @@ while True:
             if(movementDone == True):
                 if(current_step < len(angles)):
                     i=current_step
-                    if(angles[i] == 0):
+                    if(angles[i]-robot.getRotation() == 0):
                         print("moving "+str(distances[i])+"m")
                         send_distance(distances[i]*100)
-                        if(current_robotDir == 0):
-                            current_robotY += int(distances[i]*2)
-                        elif(current_robotDir == 90):
-                            current_robotX -= int(distances[i]*2)
-                        elif(current_robotDir == -90):
-                            current_robotX += int(distances[i]*2)
-                        elif(current_robotDir == 180):
-                            current_robotY -= int(distances[i]*2)
-                        print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
-                        print()
+                        robot.move(distances[i])
                         current_step += 1
                     else:
-                        print("rotating "+str(angles[i])+"°")
-                        send_angle(angles[i])
-                        print()
-                        toSubtract = angles[i]
-                        current_robotDir += toSubtract
-                        current_robotDir = calcLeastAngle(current_robotDir)
-                        print(f"Current Heading: {current_robotDir}")
-                        for ind in range(len(angles)):
-                            angles[ind] = calcLeastAngle(angles[ind]-toSubtract)
+                        angle_to_rot = angles[i]-robot.getRotation()
+                        print("rotating "+str(angle_to_rot)+"°")
+                        send_angle(angle_to_rot)
+                        robot.rotate(angle_to_rot)
                     movementDone = False
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
@@ -958,16 +931,15 @@ while True:
                     print(f"JOB: {job}")
         elif(job == 15):
             if(movementDone == True):
-                send_angle(-1*current_robotDir)
-                current_robotDir = 0
+                send_angle(-1*robot.getRotation())
+                robot.setRotation(0)
                 movementDone = False
                 moveActionTimestamp = time.time()
                 print("[movement] Start")
                 job = 16
         elif(job == 16):
             if(movementDone == True):
-                current_robotX = home_coords[0]
-                current_robotY = home_coords[1]
+                robot.setPosition_xy(home_coords[0], home_coords[1])
                 job = 0
         else:
             job = 0 #reset
@@ -979,7 +951,7 @@ while True:
         readS = 0x00
         if(test_mode == 0 and ser.inWaiting() > 0):
             readS = ser.read(1)
-            print(readS)
+          #  print(readS)
         if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
             print("[WARNING] TIMEOUT")
         if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
@@ -994,8 +966,8 @@ while True:
             readPos = ser.read(2)
             position_report = int.from_bytes(readPos, "little")
             battery_report = int.from_bytes(readBat, "little")
-            print(f"Distance Remaining {position_report}cm")
-            print(f"Battery Voltage: {battery_report/100}")
+            # print(f"Distance Remaining {position_report}cm")
+            # print(f"Battery Voltage: {battery_report/100}")
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
