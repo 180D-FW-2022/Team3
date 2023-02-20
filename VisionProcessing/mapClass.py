@@ -1,3 +1,4 @@
+from enum import Enum
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
@@ -13,10 +14,11 @@ class Move_type(Enum):
     ANGLE = 1
     DISTANCE = 2
     DIAGONAL = 3
+    COMPLETE = 4
 
 class Map:
     def __init__(self, gridArr, size = 20):
-        self.gridArr = gridArr
+        self.gridArr = gridArr.copy()
         self.gridArrBinary = gridArr.copy()
         self.gridArrPathPlan = 0
         self.gridSize = 20
@@ -58,15 +60,24 @@ class Map:
         self.gridArrBinary[self.gridArrBinary == -1] = 1
         self.gridArrBinary[self.gridArrBinary == -2] = 0
 
-    def getHomePositionIndex(self):
+    def _getHomePositionIndex(self):
         return self.home_coords
     
+    def getHomePosition(self):
+        return (self.home_coords[0] * 0.5, self.home_coords[1] * 0.5)
+    
 
-    def getTablePositionIndex(self, tableNum):
+    def _getTablePositionIndex(self, tableNum):
         if tableNum in self.table_dict:
             return self.table_dict[tableNum]
         else:
-            return -1
+            return [-1, -1]
+        
+    def getTablePosition(self, tableNum):
+        location = self._getTablePositionIndex(tableNum)
+        if(location[0] == -1):
+            return (-1,-1)
+        return (location[0] * 0.5, location[1] * 0.5)
     
     def setPosition(self, x, y):
         self.x = self.distanceToIndex(x)
@@ -78,16 +89,20 @@ class Map:
         path = self._calcPath(self.x, self.y, x_ind, y_ind) #y-start, x-start, y-end, x-end
         if(path == None):
             return -1
+        return 1
         
     def getNextMove(self):
-        to_ret = self.current_move_arr[self.current_move_index]
-        mov_type = Move_type.NONE
-        if(self.current_move_index%2 == 0):
-            mov_type = Move_type.ANGLE
+        if(len(self.current_move_arr)>self.current_move_index):
+            to_ret = self.current_move_arr[self.current_move_index]
+            mov_type = Move_type.NONE
+            if(self.current_move_index%2 == 0):
+                mov_type = Move_type.ANGLE
+            else:
+                mov_type = Move_type.DISTANCE
+            self.current_move_index+=1
+            return mov_type, to_ret
         else:
-            mov_type = Move_type.DISTANCE
-        self.current_move_index+=1
-        return mov_type, to_ret #0 rotate, 1 distance
+            return Move_type.COMPLETE, 0
 
     def distanceToIndex(self, dist):
         return int(dist*2)
@@ -223,7 +238,7 @@ class Map:
     #print(grid.grid_str(path=path, start=start, end=end))
         if(len(path) == 0):
             return None
-        self._setMotionArray(self, path)
+        self._setMotionArray(path)
         return path
     
     def _setMotionArray(self, path):

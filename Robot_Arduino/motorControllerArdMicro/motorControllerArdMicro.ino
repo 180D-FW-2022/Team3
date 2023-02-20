@@ -90,10 +90,18 @@ AccelStepper stepper4(AccelStepper::DRIVER, MOTOR_4_STEP, MOTOR_4_DIR);
 unsigned long last_volt_time = 0;
 unsigned long last_pos_time = 0;
 int isInMotion = 0;
+int report_dist_type = 0;
 U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
 
 void setup() {
   //setMotorTorqueAll(0);
+
+  Serial.begin(115200);
+  delay(300);
+  while(!Serial.available() > 0);
+  Serial.write("m");
+  delay(100);
+
   analogReference(EXTERNAL);
   u8g2.begin();
   portSetup();
@@ -109,9 +117,6 @@ void setup() {
   
   stepper4.setMaxSpeed(1000);
   stepper4.setAcceleration(1200);
-
-  Serial.begin(115200);
-  delay(1000);
 
 }
 
@@ -203,6 +208,13 @@ void sendPositionInfo(void){  //Periodic information logging
   Serial.write('p');
   Serial.write((lowByte(int(bat_volt*100))));
   Serial.write((highByte(int(bat_volt*100))));
+  if(report_dist_type == 1){
+    distance_report = int(abs(stepper1.currentPosition())*movLin_mmStep)/10;
+  }else if(report_dist_type == 2){
+    distance_report = int(abs(stepper2.currentPosition())*movLin_mmStep)/10;
+  }else{
+    distance_report = 0;
+  }
   Serial.write((lowByte(int(distance_report))));
   Serial.write((highByte(int(distance_report))));
   }
@@ -269,6 +281,7 @@ void rotateRobot(double deg, bool cw, int spd){
   stepper3.setCurrentPosition(0);
   stepper4.setCurrentPosition(0);
   isInMotion = 1;
+  report_dist_type = 0;
   int steps = int(rot_stepDeg * deg);
   int dir = -1;
   if(cw == 0){
@@ -314,9 +327,11 @@ void moveRobot(double distanceMM, int dirColor, int spd){
     if(dirColor == 1 || dirColor == 3){
       stepper2.move(dir2*steps);
       stepper4.move(dir4*steps);
+      report_dist_type = 2;
      }else{
-      stepper1.move(dir2*steps);
-      stepper3.move(dir4*steps);
+      stepper1.move(dir1*steps);
+      stepper3.move(dir3*steps);
+      report_dist_type = 1;
       }
 }
 

@@ -31,6 +31,8 @@ from firebase_admin import db
 
 #custom classes improt
 from robotClass import Robot
+from mapClass import Map
+from timerClass import RepeatedTimer
 #end
 
 
@@ -60,7 +62,6 @@ table_count = 0
 home_coords = np.array([0,0]).astype(int)
 
 
-robot = Robot()
 
 cred = credentials.Certificate("firebase_key.json")
 default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
@@ -94,6 +95,9 @@ fetched_map = getMap().split(',')
 fetched_map.reverse()
 fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size)).astype(int)
 grid_raw = fetched_map_matrix.astype(int).copy()
+
+robot = Robot()
+map = Map(grid_raw)
 #print(fetched_map_matrix)
 
 # grid_raw = np.array([
@@ -147,6 +151,7 @@ for row in range(matrix_size):
             home_coords[0] = column*0.5
             home_coords[1] = row*0.5
             robot.setPosition_xy(home_coords[0], home_coords[1])
+            robot.matchPrevWithCurrent()
             print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
 
 
@@ -270,20 +275,46 @@ if populate == 1:
                     if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
                         grid_raw_margined[row][column] = to_set_const
 
+serial_ultrasonic = 0
+serial_motor = 0
 #arduino connect pySerial
 if(test_mode == 0):
     arduino_ports = [
         p.device
         for p in serial.tools.list_ports.comports()
-        if ('Arduino' in p.description or 'USB Serial' in p.description)  # may need tweaking to match new arduinos
+        if (('Arduino' in p.description or 'USB Serial' in p.description) and 'wch' not in p.device)  # may need tweaking to match new arduinos
     ]
     if not arduino_ports:
-        raise IOError("[arduino ] Not found")
-    if len(arduino_ports) > 1:
-        warnings.warn('[arduino ] Multiple found - using the first')
-    ser = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.1)
+        print("[arduino ] Not found")
+        exit(0)
+    if len(arduino_ports) != 2:
+        print('[arduino ] Incorrect # found')
+        exit(0)
+    print(arduino_ports[0])
+    print(arduino_ports[1])
+    ser_1 = serial.Serial(arduino_ports[0], baudrate = 115200, timeout = 0.1)
+    ser_2 = serial.Serial(arduino_ports[1], baudrate = 115200, timeout = 0.1)
     time.sleep(2)
-    print(ser.name)         # check which port was really used
+    arduino_init_timeout = 0
+    ser_1.write(str.encode('y'))
+    while(arduino_init_timeout < 15):
+        arduino_init_timeout += 1
+        read_data = ser_1.read(1).decode()
+        if(read_data == 'u'):
+            print("[arduino ] Not Swapping Serial Ports")
+            serial_ultrasonic = ser_1
+            serial_motor = ser_2
+            arduino_init_timeout = -1
+            break
+        elif(read_data == 'm'):
+            print("[arduino ] Swapping Serial Ports")
+            serial_ultrasonic = ser_2
+            serial_motor = ser_1
+            arduino_init_timeout = -1
+            break
+    if(arduino_init_timeout != -1):
+        print("[arduino ] Error identifying, please make sure currect program running on Arduinos")
+        exit(0)
 
 #video init.
 index = 0
@@ -317,14 +348,14 @@ if not cap_bottom.isOpened():
 ret_start, frame_start = cap.read()
 average = frame_start.mean(axis=0).mean(axis=0)
 if(average[0] < 5.0):
-    print("[ camera ] Flipping top and bottom")
+    print("[ camera ] Flipping right and left")
     cap.release()
     cap_bottom.release()
     temp = cam_id_bottom
     cam_id_bottom = cam_id
     cam_id = temp
 
-print("PLEASE REMOVE BOTTOM CAP and press enter")
+print("PLEASE REMOVE LEFT CAP and press enter")
 input()
 
 cap = cv.VideoCapture(cam_id)
@@ -521,24 +552,10 @@ def rescale_frame(frame, percent=75):
 
 
 def halt_movment():
-    ser.write(str.encode('x'))
-    if(ser.read(1) == b'\x73'):
+    serial_motor.write(str.encode('x'))
+    if(serial_motor.read(1) == b'\x73'):
         return 1
-
-        #print(data.decode().strip())
-        #if(data.decode().strip() != '' and len(data.decode().strip()) == 2):
-        # try:
-        #     distance_remaining = struct.unpack('>h', ser.read(2))
-        #     print(distance_remaining)
-        #     return distance_remaining
-        # except:
-        #     print("error decode")
-        # elif(data.decode().strip() != '' and len(data.decode().strip()) == 1):
-        #     if(data.decode().strip() == 'a'):
-        #         print("[position]: Upon obstacle stop location lost")
     return 0
-
-
 
 def send_distance(distance, direction = 'r'):
     if(test_mode == 0):  
@@ -547,8 +564,8 @@ def send_distance(distance, direction = 'r'):
        # bytes_val = distance_send.to_bytes(2, 'big', signed=False)
         bytes_data = struct.pack('>h', distance_send)
         
-        ser.write(str.encode(direction))
-        ser.write(bytes_data)
+        serial_motor.write(str.encode(direction))
+        serial_motor.write(bytes_data)
         # if((upper_byte+lower_byte) == ser.read(2)):
         #     print("[distance]: received")
         # else:
@@ -567,8 +584,8 @@ def send_angle(angle):
         #bytes_val = angle_send.to_bytes(2, 'big', signed=True)
         bytes_data = struct.pack('>h', angle_send)
         print(bytes_data)
-        ser.write(str.encode('d'))
-        ser.write(bytes_data)
+        serial_motor.write(str.encode('d'))
+        serial_motor.write(bytes_data)
         # if(bytes_data == ser.read(2)):
         #     print("[ angle  ]: received")
         # else:
@@ -609,8 +626,8 @@ def process_april_tags(frames):
                 unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
                 #print(f"relative angle: {Pose_R}")
                # print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
-                x_offset = unofficial_tag_position[1]
-                angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[1])*(180/math.pi))
+                x_offset = unofficial_tag_position[0]
+                angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[0])*(180/math.pi))
                 angle_temp = angle
                 angle = int(90-abs(angle))
                 if(angle_temp > 0):
@@ -639,11 +656,11 @@ def calcPath(grid, start_x, start_y, goal_x, goal_y):
     finder = AStarFinder(diagonal_movement=DiagonalMovement.never,  heuristic=null)
     path, runs = finder.find_path(start, end, grid)
    #print(grid.grid_str(path=path, start=start, end=end))
-    print(path)
+    #print(path)
     return path
 
 def calcPathRWU(grid, start_x, start_y, goal_x, goal_y):
-    print(f"startx: {start_x}, stary: {start_y}, goalx: {goal_x}, goaly: {goal_y}")
+   # print(f"startx: {start_x}, stary: {start_y}, goalx: {goal_x}, goaly: {goal_y}")
     return calcPath(grid, int(2*start_x), int(2*start_y), int(2*goal_x), int(2*goal_y))
 
 def calcMovesDistance(path_arr):    
@@ -772,6 +789,12 @@ def updateDisplay(arr):
     fig.canvas.draw_idle()     
     plt.pause(1) 
 
+
+def logInfo():
+    robot.printLiveData()
+
+rt = RepeatedTimer(1, logInfo)
+
 headingTableX = 2
 headingTableY = 2
 current_step = 0
@@ -780,10 +803,11 @@ angles = []
 print("STARTING PROGRAM")
 print()
 
+
+
 halt_movment()
 job = 0 #nothing
-start = time.time()
-lastSerRead = time.time()
+prev_job = 0 #used for returning to previous job from obstacle detection and april tag detection jobs. 
 while True:
    # os.system('clear')
     # Capture frame-by-frame
@@ -807,8 +831,8 @@ while True:
             else:
                 print("No action need to be done")
                 time.sleep(2)
-            headingTableX = table_dict[0][0]
-            headingTableY = table_dict[0][1]
+            headingTableX = table_dict[0][0] #testing
+            headingTableY = table_dict[0][1] #testing
             job = 10
         elif(job == 5):#check april location
             countFrame = 0
@@ -843,15 +867,7 @@ while True:
                 if(rem_dist == -1):
                     rem_dist = halt_movment()
                 if(rem_dist != -1):
-                    if(current_robotDir == 0):
-                        current_robotY -= int(rem_dist/100)
-                    elif(current_robotDir == 90):
-                        current_robotX += int(rem_dist/100)
-                    elif(current_robotDir == -90):
-                        current_robotX -= int(rem_dist/100)
-                    elif(current_robotDir == 180):
-                        current_robotY += int(rem_dist/100)
-                    print(f"Current Position: x:{current_robotX}, y:{current_robotY}")
+                    print("need update position to halted one.")
         elif(job == 9):
             #check for new data.
             print(table_dict[0])
@@ -859,8 +875,9 @@ while True:
             print(f"JOB: {job}")
         elif(job == 10):
             grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPathRWU(grid_loaded, robot.x, robot.y, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
-            if(len(arr) > 0):
+            arr = calcPathRWU(grid_loaded, robot.get_x(), robot.get_y(), headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            map.setPosition(robot.get_x(), robot.get_y())
+            if(map.setTarget(headingTableX, headingTableY) > 0):
                 updateDisplay(arr)
                 distances = calcMovesDistance(arr)
                 angles = calcMovesHeading(arr)                
@@ -871,6 +888,7 @@ while True:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 11): #move to table
             if(movementDone == True):
+                print(map.getNextMove())
                 if(current_step < len(angles)):
                     i=current_step
                     if(angles[i]-robot.getRotation() == 0):
@@ -887,7 +905,6 @@ while True:
                     movementDone = False
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
-                    robot.printCurrentData()
                 else:
                     job = 12
                     print(f"JOB: {job}")
@@ -899,7 +916,7 @@ while True:
             headingTableX = home_coords[0]
             headingTableY = home_coords[1] #setNew data.
             grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPathRWU(grid_loaded, robot.x, robot.y, headingTableX, headingTableY) #y-start, x-start, y-end, x-end
+            arr = calcPathRWU(grid_loaded, robot.get_x(), robot.get_y(), headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             if(len(arr) > 0):
                 updateDisplay(arr)
                 distances = calcMovesDistance(arr)
@@ -940,6 +957,7 @@ while True:
         elif(job == 16):
             if(movementDone == True):
                 robot.setPosition_xy(home_coords[0], home_coords[1])
+                robot.matchPrevWithCurrent()
                 job = 0
         else:
             job = 0 #reset
@@ -949,8 +967,8 @@ while True:
         
         #check if movmement is done - arduino sends 0x61 on move done. 
         readS = 0x00
-        if(test_mode == 0 and ser.inWaiting() > 0):
-            readS = ser.read(1)
+        if(test_mode == 0 and serial_motor.inWaiting() > 0):
+            readS = serial_motor.read(1)
           #  print(readS)
         if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
             print("[WARNING] TIMEOUT")
@@ -962,12 +980,13 @@ while True:
             time.sleep(0.1)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
             readS = 0x00
-            readBat = ser.read(2)
-            readPos = ser.read(2)
-            position_report = int.from_bytes(readPos, "little")
-            battery_report = int.from_bytes(readBat, "little")
-            # print(f"Distance Remaining {position_report}cm")
-            # print(f"Battery Voltage: {battery_report/100}")
+            readBat = serial_motor.read(2)
+            readPos = serial_motor.read(2)
+            position_report = int.from_bytes(readPos, "little")/100 #m
+            battery_report = int.from_bytes(readBat, "little")*10 #mV
+            print(position_report)
+            robot.setLeg(position_report)
+            robot.setBatteryVoltage(battery_report)
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 
@@ -979,4 +998,5 @@ cap_bottom.release()
 cv.destroyAllWindows()
 plt.waitforbuttonpress()
 if(test_mode == 0):     
-    ser.close()             # close port
+    serial_motor.close()             # close port
+    serial_ultrasonic.close()
