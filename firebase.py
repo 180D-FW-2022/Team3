@@ -2,8 +2,23 @@
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
+import sys
+import os
 
-cred = credentials.Certificate("firebase_key.json")
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+keyPath = resource_path("firebase_key.json")
+
+cred = credentials.Certificate(keyPath)
 default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})
 ref = db.reference()
 
