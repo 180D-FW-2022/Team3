@@ -1,6 +1,9 @@
 import orTak
+import sys
 
-tableOne = orTak.OrTak(1)
+tableNumber = sys.argv[1]
+print("OrTak Table Number:", tableNumber)
+tableOne = orTak.OrTak(tableNumber)
 tableOne.takeOrder()
 
 #run with 2>/dev/null
