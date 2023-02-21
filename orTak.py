@@ -82,9 +82,9 @@ class OrTak:
 
 
     def takeOrder(self): 
-        self.__resetTable()
         print("Say \"Ready\" to begin your order!")
         while True:
+            self.__resetTable()
             wakeWord = self.__speechToText()
             if wakeWord != "ready":
                 continue
@@ -110,16 +110,17 @@ class OrTak:
 
                 print("Would you like to order anything else?")
                 orderMore = self.__speechToText()
-                if any(word in orderMore for word in self.negativeResponses):
+                if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
                     continue
                 if any(word in orderMore for word in self.negativeResponses):
                     print("Any special requests?")
                     specialRequestRaw = self.__speechToText()
                     print(specialRequestRaw)
-                    if not any(word in specialRequestRaw for word in ["no", "nah", "nope", "i'm good", "no thanks", "absolutely not"]):
+                    if specialRequestRaw not in self.negativeResponses:
                         self.specialRequests = specialRequestRaw
                     self.__sendOrder()
-                    return
+                    print("Say \"Ready\" to begin your order!")
+                    break
 
         
     def testOrder(self, itemArray):

@@ -14,7 +14,7 @@ a = Analysis(
     ['KitchenGUI.py'],
     pathex=[path],
     binaries=[],
-    datas=[("../firebase_key.json", ".")],
+    datas=[("firebase_key.json", ".")],
     hiddenimports=[],
     hookspath=[kivymd_hooks_path],
     hooksconfig={},
