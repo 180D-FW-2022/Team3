@@ -1,36 +1,17 @@
 import os, sys
 from kivy.resources import resource_add_path, resource_find
 
-<<<<<<< HEAD
 from kivy.metrics import dp
 from kivymd.app import MDApp
 from kivymd.uix.datatables import MDDataTable
-=======
-from selectors import EVENT_WRITE
-from kivy.metrics import dp
-from kivy.uix.button import Button
-# from kivy.clock import Clock
-from kivymd.app import MDApp
-from kivymd.uix.datatables import MDDataTable
-from kivymd.uix.label import MDLabel
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivymd.uix.button import MDRaisedButton
->>>>>>> 0b15c864751a04f17bbf729f1833392ad25ce1b6
 from kivymd.uix.screen import Screen
 from kivy.core.window import Window
 
 from collections import deque
 import firebase
 import asyncio
+import traceback
 
-<<<<<<< HEAD
-=======
-
-# import kitchenNode
-
->>>>>>> 0b15c864751a04f17bbf729f1833392ad25ce1b6
 class customEvent:
     data: True
 
@@ -45,11 +26,7 @@ class KitchenGUI(MDApp):
 
 
     def build(self):
-<<<<<<< HEAD
         # Window.bind(on_request_close=self.on_request_close)
-=======
-        Window.bind(on_request_close=self.on_request_close)
->>>>>>> 0b15c864751a04f17bbf729f1833392ad25ce1b6
 
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Green"
@@ -205,11 +182,7 @@ class KitchenGUI(MDApp):
             firebase.ref.child("WOKerReady").set(False)        
 
 
-<<<<<<< HEAD
     def on_stop(self):
-=======
-    def on_request_close(self, *args):
->>>>>>> 0b15c864751a04f17bbf729f1833392ad25ce1b6
         print("exiting...")
         self.listener.close()
         self.readyOrdersListener.close()
@@ -260,5 +233,5 @@ if __name__ == "__main__":
         GUI = KitchenGUI()
         GUI.run()
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         input("Press enter.")
