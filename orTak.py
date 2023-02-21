@@ -17,6 +17,7 @@ class OrTak:
     itemCount = 0
     specialRequests = 'N/A'
     cost = 0
+    negativeResponses = ["no", "nah", "nope", "i'm good", "no thanks", "absolutely not"]
 
     def __init__(self, tableNumberArg):
         self.tableNumber = tableNumberArg 
@@ -109,13 +110,13 @@ class OrTak:
 
                 print("Would you like to order anything else?")
                 orderMore = self.__speechToText()
-                if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
+                if any(word in orderMore for word in self.negativeResponses):
                     continue
-                if any(word in orderMore for word in ["no", "nah", "nope", "I'm good", "no thanks", "absolutely not"]):
+                if any(word in orderMore for word in self.negativeResponses):
                     print("Any special requests?")
                     specialRequestRaw = self.__speechToText()
                     print(specialRequestRaw)
-                    if not any(word in specialRequestRaw for word in ["no", "nah", "nope", "I'm good", "no thanks", "absolutely not"]):
+                    if not any(word in specialRequestRaw for word in ["no", "nah", "nope", "i'm good", "no thanks", "absolutely not"]):
                         self.specialRequests = specialRequestRaw
                     self.__sendOrder()
                     return
