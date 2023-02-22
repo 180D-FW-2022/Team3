@@ -1,11 +1,8 @@
 import speech_recognition as sr
 import paho.mqtt.client as mqtt
-import mqttTopics
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
 import firebase
 import LCDdisplay as lcd
+
 
 class OrTak:
     #menu dictionary with items and prices
@@ -22,6 +19,7 @@ class OrTak:
     itemCount = 0
     specialRequests = 'N/A'
     cost = 0
+    negativeResponses = ["no", "nah", "nope", "i'm good", "no thanks", "absolutely not"]
 
     def __init__(self, tableNumberArg):
         self.tableNumber = tableNumberArg 
@@ -34,19 +32,25 @@ class OrTak:
         self.cost = 0
 
     def __speechToText(self):
-        while True:
-            r = sr.Recognizer()
-            with sr.Microphone() as source:
-                audio = r.listen(source)
-
-            try:
-                text = r.recognize_google(audio).lower()
-                break
-            except sr.UnknownValueError:
-                print("Try again; Google Speech Recognition could not understand audio")
-            except sr.RequestError as e:
-                print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
-        return text
+        r = sr.Recognizer()
+        text=""
+        with sr.Microphone() as source:
+            while True:
+                try:
+                    r.adjust_for_ambient_noise(source)
+                    audio = r.listen(source)
+                    text = r.recognize_google(audio, show_all=False, key=None, language="en-US")
+                    print("text:", text)
+                    numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+                    if text in numbers:
+                        text = str(numbers.index(text) + 1)
+                    break       
+                except sr.UnknownValueError:
+                    print(sr.UnknownValueError)
+                    print("Try again; Google Speech Recognition could not understand audio")
+                except sr.RequestError as e:
+                    print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
+        return text.lower()
     
     def __sendOrder(self):
         # Example string; TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
@@ -72,93 +76,61 @@ class OrTak:
             "orderNumber": int(orderNumber)
         }
 
-        # for item in self.itemArray:
-        #     # print(type(item))
-        #     currentOrderRef.child("items/"+item[0]).set(item[1])
-        #     print(item[0])
-        #     print(item[1])
-        #     pass
+        print(orderDict)
+
 
         firebase.ref.child("sentOrders/order" + str(orderNumber)).set(orderDict)
-        # currentOrderRef.set(orderDict)
         firebase.ref.child("currentOrder").set(orderNumber)
 
-        orderString = "TN:"+str(self.tableNumber)+";Items:"+itemString+";Tot:"+str(self.itemCount)+";Cost:"+str(self.cost)+";SR:"+self.specialRequests
-        print(orderString)
-
-        def on_connect(client, userdata, flags, rc):
-            print("Connection returned result: "+str(rc))
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
-
-        # The callback of the client when it disconnects.
-        def on_disconnect(client, userdata, rc):
-            if rc != 0:
-                print('Unexpected Disconnect')
-            else:
-                print('Expected Disconnect')
-        # The default message callback.
-        # (won’t be used if only publishing, but can still exist)
-        def on_message(client, userdata, message):
-            print("Received: " , orderString)
-        # 1. create a client instance.
-        client = mqtt.Client()
-        # add additional client options (security, certifications, etc.)
-        # many default options should be good to start off.
-        # add callbacks to client.
-        client.on_connect = on_connect
-        client.on_disconnect = on_disconnect
-        client.on_message = on_message
-        # 2. connect to a broker using one of the connect*() functions.
-        client.connect_async(mqttTopics.broker)
-        # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
-        client.loop_start()
-        # 4. use subscribe() to subscribe to a topic and receive messages.
-        # 5. use publish() to publish messages to the broker.
-        # payload must be a string, bytearray, int, float or None.
-        client.publish(mqttTopics.orTakTopic, orderString, qos=1)
-        client.loop_stop()
-        print("Order sent!")
 
     def takeOrder(self): 
-        self.__resetTable()
-        print("What would you like to order?")
-        lcd.displayString("What would you like to order?")
+        print("Say \"Ready\" to begin your order!")
+        lcd.displayString("Say \"Ready\" to begin your order!"))
         while True:
-            item = self.__speechToText()
-            print(item)
-            if item == "no":
-                print("Any special requests?")
-                lcd.displayString("Any special requests?")
-                specialRequestRaw = self.__speechToText()
-                print(specialRequestRaw)
-                if specialRequestRaw != 'no':
-                    self.specialRequests = specialRequestRaw
-                break
-            
-            if item in list(self.menu.keys()):
-                print("How many?")
-                lcd.displayString("How many?")
-                while True:
-                    qty = self.__speechToText()
-                    if qty.isnumeric():
-                        break
-                    print("Please repeat yourself!")
-                    lcd.displayString("Please repeat yourself")
-                print(qty)
-                self.itemArray.append((item, int(qty)))
-                self.itemCount += int(qty)
-                self.cost += int(qty) * self.menu[item]
-                pass
-            else:  
-                print("Item not found in menu; try again")
-                lcd.displayString("Item not found in menu; try again")
+            self.__resetTable()
+            wakeWord = self.__speechToText()
+            if wakeWord != "ready":
                 continue
+            while True:
+                print("What would you like to order?")
+                lcd.displayString("What would you like to order?")
+                item = self.__speechToText()
+                print(item)
+                if item in list(self.menu.keys()):
+                    print("How many?")
+                    lcd.displayString("How many?")
+                    while True:
+                        qty = self.__speechToText()
+                        print("qty:", qty)
+                        if qty.isnumeric():
+                            break
+                        print("Please repeat yourself!")
+                        lcd.displayString("Please repeat yourself!")
+                    self.itemArray.append((item, int(qty)))
+                    self.itemCount += int(qty)
+                    self.cost += int(qty) * self.menu[item]
+                    pass
+                else:  
+                    print("Item not found in menu; try again")
+                    lcd.displayString("Item not found in menu; try again")
+                    continue
 
-            print("Would you like to order anything else?")
-            lcd.displayString("Would you like to order anything else?")
-        
-        self.__sendOrder()
+                print("Would you like to order anything else?")
+                lcd.displayString("Would you like to order anything else?")
+                orderMore = self.__speechToText()
+                if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
+                    continue
+                if any(word in orderMore for word in self.negativeResponses):
+                    print("Any special requests?")
+                    lcd.displayString("Any special requests?")
+                    specialRequestRaw = self.__speechToText()
+                    print(specialRequestRaw)
+                    if specialRequestRaw not in self.negativeResponses:
+                        self.specialRequests = specialRequestRaw
+                    self.__sendOrder()
+                    print("Say \"Ready\" to begin your order!")
+                    lcd.displayString("Say \"Ready\" to begin your order!")
+                    break
 
         
     def testOrder(self, itemArray):
