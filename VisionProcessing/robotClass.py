@@ -50,25 +50,25 @@ class Robot:
 
     def getCurrentPositionInMotionXY(self):
         if(self.rot == 0):
-            return (self.prev_x, self.prev_y - self.remaining_leg_m_reported)
+            return (self.prev_x, self.prev_y - self.leg_m_reported)
         elif(self.rot == 90):
-            return (self.prev_x + self.remaining_leg_m_reported, self.prev_y)
+            return (self.prev_x + self.leg_m_reported, self.prev_y)
         elif(self.rot == -90):
-            return (self.prev_x - self.remaining_leg_m_reported, self.prev_y)
+            return (self.prev_x - self.leg_m_reported, self.prev_y)
         elif(self.rot == 180):
-            return (self.prev_x, self.prev_y + self.remaining_leg_m_reported)
+            return (self.prev_x, self.prev_y + self.leg_m_reported)
 
     def move(self, distance):
         self.prev_y = self.y
         self.prev_x = self.x
-        if(self.rot == 0):
-            self.y += int(distance)
+        if(self.rot == 0): 
+            self.y = self.y + (distance)
         elif(self.rot == 90):
-            self.x -= int(distance)
+            self.x = self.x - (distance)
         elif(self.rot == -90):
-            self.x += int(distance)
+            self.x = self.x + (distance)
         elif(self.rot == 180):
-            self.y -= int(distance)
+            self.y = self.y - (distance)
         
     def setPosition_xy(self, x, y):
         self.prev_y = self.y
@@ -108,6 +108,7 @@ class Robot:
         return False
     
     def printLiveData(self):
-        print(f"[ Robot ]: x,y:{self.getCurrentPositionInMotionXY()}, Θ:{self.rot}")
+        #print(f"[ Robot ]: x,y:{self.getCurrentPositionInMotionXY()}, Θ:{self.rot}")
+        print(f"[ Robot ]: x,y:{self.getPosition_xy()}, Θ:{self.rot}")
     
 

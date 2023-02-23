@@ -31,7 +31,7 @@ from firebase_admin import db
 
 #custom classes improt
 from robotClass import Robot
-from mapClass import Map
+from mapClass import Map, Move_type
 from timerClass import RepeatedTimer
 #end
 
@@ -59,7 +59,6 @@ battery_report = 0
 
 table_dict = dict()
 table_count = 0
-home_coords = np.array([0,0]).astype(int)
 
 
 
@@ -96,9 +95,7 @@ fetched_map.reverse()
 fetched_map_matrix = np.reshape(fetched_map, (matrix_size, matrix_size)).astype(int)
 grid_raw = fetched_map_matrix.astype(int).copy()
 
-robot = Robot()
-map = Map(grid_raw)
-#print(fetched_map_matrix)
+
 
 # grid_raw = np.array([
 #             [4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -122,7 +119,16 @@ map = Map(grid_raw)
 #             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 #             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],    
 #             ]).astype(int)
-# fetched_map_matrix = grid_raw.copy()
+
+
+robot = Robot()
+map = Map(grid_raw)
+robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
+robot.matchPrevWithCurrent()
+#print(fetched_map_matrix)
+
+
+#fetched_map_matrix = grid_raw.copy() #remove for actual 
 
 #print(grid_raw)
 print((grid_raw).shape)
@@ -138,142 +144,6 @@ grid_raw_margined = grid_raw.copy()
 print(grid_raw_margined)
 # grid_loaded = Grid(matrix=grid_raw_margined)
 
-
-for row in range(matrix_size):
-    for column in range(matrix_size):
-        if(fetched_map_matrix[row][column]>=10):
-            table_num = fetched_map_matrix[row][column] - 10
-            if (table_num) not in table_dict:
-                table_dict[table_num] = [column*0.5, row*0.5]
-                print(f"Table {table_num} found {table_dict[table_num]}")
-                table_count+=1
-        if(fetched_map_matrix[row][column] == 4):
-            home_coords[0] = column*0.5
-            home_coords[1] = row*0.5
-            robot.setPosition_xy(home_coords[0], home_coords[1])
-            robot.matchPrevWithCurrent()
-            print(f"Home found: x: {home_coords[0]}, y: {home_coords[1]}")
-
-
-
-to_set_const = 4 #weight of margin entries
-populate = 1
-if populate == 1:
-    for row in range(matrix_size): #populate margins of 0.5m or 1 block around items for path planning. 
-        for column in range(matrix_size):
-            current = grid_raw[row][column]
-        # left = grid_raw[row][column-1]
-        # right = grid_raw[row][column+1]
-        # up = grid_raw[row-1][column]
-        # down = grid_raw[row+1][column]
-            if(row > 0 and row<(matrix_size-1) and column > 0 and column<(matrix_size-1)):
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = grid_raw[row][column+1]
-                    up = grid_raw[row-1][column]
-                    down = grid_raw[row+1][column]
-                    d1 = grid_raw[row-1][column-1] #up left diagonal
-                    d2 = grid_raw[row-1][column+1] #up right diag
-                    d3 = grid_raw[row+1][column-1] #down left diag
-                    d4 = grid_raw[row+1][column+1] #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == 0 and column > 0 and column<(matrix_size-1)): #top 
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = grid_raw[row][column+1]
-                    up = 1
-                    down = grid_raw[row+1][column]
-                    d1 = 1 #up left diagonal
-                    d2 = 1 #up right diag
-                    d3 = grid_raw[row+1][column-1] #down left diag
-                    d4 = grid_raw[row+1][column+1] #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == (matrix_size-1) and column > 0 and column<(matrix_size-1)): #bottom
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = grid_raw[row][column+1]
-                    up = grid_raw[row-1][column]
-                    down = 1
-                    d1 = grid_raw[row-1][column-1] #up left diagonal
-                    d2 = grid_raw[row-1][column+1] #up right diag
-                    d3 = 1 #down left diag
-                    d4 = 1 #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row > 0 and row<(matrix_size-1) and column == 0): #left
-                if(current == 1):
-                    left = 1
-                    right = grid_raw[row][column+1]
-                    up = grid_raw[row-1][column]
-                    down = grid_raw[row+1][column]
-                    d1 = 1 #up left diagonal
-                    d2 = grid_raw[row-1][column+1] #up right diag
-                    d3 = 1 #down left diag
-                    d4 = grid_raw[row+1][column+1] #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row > 0 and row<(matrix_size-1) and column==(matrix_size-1)): #right
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = 1
-                    up = grid_raw[row-1][column]
-                    down = grid_raw[row+1][column]
-                    d1 = grid_raw[row-1][column-1] #up left diagonal
-                    d2 = 1 #up right diag
-                    d3 = grid_raw[row+1][column-1] #down left diag
-                    d4 = 1 #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == 0 and column == 0): #top left
-                if(current == 1):
-                    left = 1
-                    right = grid_raw[row][column+1]
-                    up = 1
-                    down = grid_raw[row+1][column]
-                    d1 = 1 #up left diagonal
-                    d2 = 1 #up right diag
-                    d3 = 1 #down left diag
-                    d4 = grid_raw[row+1][column+1] #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == (matrix_size-1) and column == 0): #bottom left
-                if(current == 1):
-                    left = 1
-                    right = grid_raw[row][column+1]
-                    up = grid_raw[row-1][column]
-                    down = 1
-                    d1 = 1 #up left diagonal
-                    d2 = grid_raw[row-1][column+1] #up right diag
-                    d3 = 1 #down left diag
-                    d4 = 1 #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == (matrix_size-1) and column == (matrix_size-1)): #bottom right
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = 1
-                    up = grid_raw[row-1][column]
-                    down = 1
-                    d1 = grid_raw[row-1][column-1] #up left diagonal
-                    d2 = 1 #up right diag
-                    d3 = 1 #down left diag
-                    d4 = 1 #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
-            if(row == 0 and column == (matrix_size-1)): #top right
-                if(current == 1):
-                    left = grid_raw[row][column-1]
-                    right = 1
-                    up = 1
-                    down = grid_raw[row+1][column]
-                    d1 = 1 #up left diagonal
-                    d2 = 1 #up right diag
-                    d3 = grid_raw[row+1][column-1] #down left diag
-                    d4 = 1 #down right diag
-                    if(left == 0 or right == 0  or up == 0 or down == 0 or d1 == 0 or d2 == 0 or d3 == 0 or d4 == 0):
-                        grid_raw_margined[row][column] = to_set_const
 
 serial_ultrasonic = 0
 serial_motor = 0
@@ -297,6 +167,7 @@ if(test_mode == 0):
     time.sleep(2)
     arduino_init_timeout = 0
     ser_1.write(str.encode('y'))
+    ser_2.write(str.encode('y'))
     while(arduino_init_timeout < 15):
         arduino_init_timeout += 1
         read_data = ser_1.read(1).decode()
@@ -447,8 +318,8 @@ M = cv_file.getNode("M").real()
 cv_file.release()
 
 
-cv.namedWindow('disp',cv.WINDOW_NORMAL)
-cv.resizeWindow('disp',600,600)
+# cv.namedWindow('disp',cv.WINDOW_NORMAL)
+# cv.resizeWindow('disp',600,600)
 
 
 output_canvas = None
@@ -487,7 +358,7 @@ def obstacle_avoid():
       #  cv.putText(output_canvas, "SAFE!", (100,100),1,3,(0,255,0),2,3)
         return -1
 
-    cv.imshow('output_canvas',output_canvas)
+    #cv.imshow('output_canvas',output_canvas)
 
 def processStereo(imgR, imgL):
     global stereo, output_canvas, depth_map
@@ -560,40 +431,22 @@ def halt_movment():
 def send_distance(distance, direction = 'r'):
     if(test_mode == 0):  
         distance_send = int(abs(distance))
-        print("[distance]: move: "+ str(distance_send))
+        #print("[distance]: move: "+ str(distance_send))
        # bytes_val = distance_send.to_bytes(2, 'big', signed=False)
         bytes_data = struct.pack('>h', distance_send)
-        
         serial_motor.write(str.encode(direction))
         serial_motor.write(bytes_data)
-        # if((upper_byte+lower_byte) == ser.read(2)):
-        #     print("[distance]: received")
-        # else:
-        #     # ser.write(b'\x00') 
-        #     # ser.write(b'\x00') 
-        #     # ser.write(b'\x00') 
-
-        # # movementDone = True 
-        #     time.sleep(0.1)
         time.sleep(0.1)
 
 def send_angle(angle):
     if(test_mode == 0):  
         angle_send = int(angle)
-        print("[ angle  ]: move: "+str(angle_send))
+        #print("[ angle  ]: move: "+str(angle_send))
         #bytes_val = angle_send.to_bytes(2, 'big', signed=True)
         bytes_data = struct.pack('>h', angle_send)
-        print(bytes_data)
+        #print(bytes_data)
         serial_motor.write(str.encode('d'))
         serial_motor.write(bytes_data)
-        # if(bytes_data == ser.read(2)):
-        #     print("[ angle  ]: received")
-        # else:
-        #     # ser.write(b'\x00') 
-        #     # ser.write(b'\x00') 
-        #     # ser.write(b'\x00') 
-        # # movementDone = True
-        #     time.sleep(0.1)
         time.sleep(0.1)
 
 def process_april_tags(frames):
@@ -650,130 +503,8 @@ def process_april_tags(frames):
         eulerRotx = int(eulerRotx/total_results)
     return xStore, eulerRotx, angleStore, distanceStore
 
-def calcPath(grid, start_x, start_y, goal_x, goal_y):
-    start = grid.node(start_x, start_y)
-    end = grid.node(goal_x, goal_y)
-    finder = AStarFinder(diagonal_movement=DiagonalMovement.never,  heuristic=null)
-    path, runs = finder.find_path(start, end, grid)
-   #print(grid.grid_str(path=path, start=start, end=end))
-    #print(path)
-    return path
-
-def calcPathRWU(grid, start_x, start_y, goal_x, goal_y):
-   # print(f"startx: {start_x}, stary: {start_y}, goalx: {goal_x}, goaly: {goal_y}")
-    return calcPath(grid, int(2*start_x), int(2*start_y), int(2*goal_x), int(2*goal_y))
-
-def calcMovesDistance(path_arr):    
-    arr = path_arr
-    cnt = 0
-    arr_direction_y = []
-    arr_direction_x = []
-    arr_angle = []
-    for i in arr:
-        if(cnt>0):
-            y_dir = i[1]-arr[cnt-1][1]
-            x_dir = i[0]-arr[cnt-1][0]
-            arr_direction_y.append(y_dir)
-            arr_direction_x.append(x_dir)
-            angle = 0
-            if(y_dir == 1):
-                angle = 0
-            elif(y_dir == -1):
-                angle = 180
-            elif(x_dir == 1):
-                angle = -90
-            elif(x_dir == -1):
-                angle = 90
-            arr_angle.append(angle)
-        cnt+=1
-
-    ang_prev = arr_angle[0]
-    distance = 0
-    arr_distance = []
-    arr_angle_clean = []
-    counter = 0
-    for j in range(1,len(arr_angle)):
-        counter+= 1
-        if(arr_angle[j] == ang_prev and counter+1 <= len(arr_angle)):
-            ang_prev = arr_angle[j]
-            distance+=0.5   
-            if(counter+1 == len(arr_angle)):
-                distance+=0.5
-                arr_distance.append(distance)
-                arr_angle_clean.append(ang_prev)
-                distance = 0
-        else:    
-            distance+=0.5
-            arr_distance.append(distance)
-            arr_angle_clean.append(ang_prev)
-            if(counter+1 == len(arr_angle)):
-                arr_distance.append(0.5)
-                arr_angle_clean.append(arr_angle[j])
-            distance = 0
-            ang_prev = arr_angle[j]
-    return arr_distance
-
-def calcMovesHeading(path_arr):    
-    arr = path_arr
-    cnt = 0
-    arr_direction_y = []
-    arr_direction_x = []
-    arr_angle = []
-    for i in arr:
-        if(cnt>0):
-            y_dir = i[1]-arr[cnt-1][1]
-            x_dir = i[0]-arr[cnt-1][0]
-            arr_direction_y.append(y_dir)
-            arr_direction_x.append(x_dir)
-            angle = 0
-            if(y_dir == 1):
-                angle = 0
-            elif(y_dir == -1):
-                angle = 180
-            elif(x_dir == 1):
-                angle = -90
-            elif(x_dir == -1):
-                angle = 90
-            arr_angle.append(angle)
-        cnt+=1
-
-    ang_prev = arr_angle[0]
-    distance = 0
-    arr_distance = []
-    arr_angle_clean = []
-    counter = 0
-    for j in range(1,len(arr_angle)):
-        counter+= 1
-        if(arr_angle[j] == ang_prev and counter+1 <= len(arr_angle)):
-            ang_prev = arr_angle[j]
-            distance+=0.5   
-            if(counter+1 == len(arr_angle)):
-                distance+=0.5
-                arr_distance.append(distance)
-                arr_angle_clean.append(ang_prev)
-                distance = 0
-        else:    
-            distance+=0.5
-            arr_distance.append(distance)
-            arr_angle_clean.append(ang_prev)
-            if(counter+1 == len(arr_angle)):
-                arr_distance.append(0.5)
-                arr_angle_clean.append(arr_angle[j])
-            distance = 0
-            ang_prev = arr_angle[j]        
-    return arr_angle_clean
-
-def calcLeastAngle(angle):
-    to_ret = angle
-    if(angle > 360):
-         to_ret = angle%360
-    if(angle < -360):
-        to_ret = -1*(abs(angle)%360)
-    if(angle == 270):
-        to_ret = -90
-    if(angle == -270):
-        to_ret = 90
-    return int(to_ret)
+def angle (a, b, c):
+    return math.degrees(math.acos((c**2 - b**2 - a**2)/(-2.0 * a * b)))
 
 def updateDisplay(arr):     
     #display
@@ -789,30 +520,30 @@ def updateDisplay(arr):
     fig.canvas.draw_idle()     
     plt.pause(1) 
 
-
 def logInfo():
     robot.printLiveData()
 
 rt = RepeatedTimer(1, logInfo)
 
-headingTableX = 2
-headingTableY = 2
+headingTableX = 0
+headingTableY = 0
 current_step = 0
 distances = []
 angles = []
 print("STARTING PROGRAM")
 print()
 
-
-
 halt_movment()
 job = 0 #nothing
 prev_job = 0 #used for returning to previous job from obstacle detection and april tag detection jobs. 
+last_check_timestamp = 0
+closest_distance_front = 200
 while True:
    # os.system('clear')
     # Capture frame-by-frame
     try:
-        if(job == 0):
+        if(job == 0 and time.time()-last_check_timestamp>2):
+            last_check_timestamp = time.time()
             WOKerReadyTrue()
             #print(isKitchenReady())
             if(isKitchenReady() == True):
@@ -821,19 +552,15 @@ while True:
                 robotReceivedTrue()
                 print(table_to_go_to)
                 #print(table_num)
-                if(table_to_go_to <= table_count):
-                    headingTableX = table_dict[table_to_go_to][0]
-                    headingTableY = table_dict[table_to_go_to][1]
+                if(table_to_go_to <= table_count): #TODO TABLE EXISTS
+                    headingTableX = map.getTablePosition(table_to_go_to)[0]
+                    headingTableY = map.getTablePosition(table_to_go_to)[1]
                     job = 10
                     print(f"JOB: {job}")
                 else:
                     print("Table doesn't exist")
             else:
                 print("No action need to be done")
-                time.sleep(2)
-            headingTableX = table_dict[0][0] #testing
-            headingTableY = table_dict[0][1] #testing
-            job = 10
         elif(job == 5):#check april location
             countFrame = 0
             frames_top = []
@@ -870,39 +597,32 @@ while True:
                     print("need update position to halted one.")
         elif(job == 9):
             #check for new data.
-            print(table_dict[0])
             job = 10
             print(f"JOB: {job}")
         elif(job == 10):
-            grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPathRWU(grid_loaded, robot.get_x(), robot.get_y(), headingTableX, headingTableY) #y-start, x-start, y-end, x-end
             map.setPosition(robot.get_x(), robot.get_y())
+            robot.matchPrevWithCurrent()
             if(map.setTarget(headingTableX, headingTableY) > 0):
-                updateDisplay(arr)
-                distances = calcMovesDistance(arr)
-                angles = calcMovesHeading(arr)                
-                current_step = 0
                 job = 11
                 print(f"JOB: {job}")
             else:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 11): #move to table
             if(movementDone == True):
-                print(map.getNextMove())
-                if(current_step < len(angles)):
-                    i=current_step
-                    if(angles[i]-robot.getRotation() == 0):
-                        print("moving "+str(distances[i])+"m")
-                        send_distance(distances[i]*100)
-                        robot.move(distance=distances[i])
-                        #job = 6
-                        current_step += 1
-                    else:
-                        angle_to_rot = angles[i]-robot.getRotation()
-                        print("rotating "+str(angle_to_rot)+"°")
-                        send_angle(angle_to_rot)
-                        robot.rotate(angle_to_rot)
+                moveT, amount = map.getNextMove(robot.getRotation())
+                print(moveT)
+                print(amount)
+                if(moveT != Move_type.COMPLETE):
                     movementDone = False
+                    if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
+                        send_angle(amount)
+                        robot.rotate(amount)
+                    elif(moveT == Move_type.ANGLE and amount == 0):
+                        movementDone = True
+                    elif(moveT == Move_type.DISTANCE):
+                        send_distance(amount*100)
+                        robot.move(amount)
+                    
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
                 else:
@@ -913,34 +633,29 @@ while True:
             job = 13
             print(f"JOB: {job}")
         elif(job == 13): #return home
-            headingTableX = home_coords[0]
-            headingTableY = home_coords[1] #setNew data.
-            grid_loaded = Grid(matrix=grid_raw_margined)
-            arr = calcPathRWU(grid_loaded, robot.get_x(), robot.get_y(), headingTableX, headingTableY) #y-start, x-start, y-end, x-end
-            if(len(arr) > 0):
-                updateDisplay(arr)
-                distances = calcMovesDistance(arr)
-                angles = calcMovesHeading(arr)
-                current_step = 0
+            map.setPosition(robot.get_x(), robot.get_y())
+            robot.matchPrevWithCurrent()
+            if(map.setTarget(map.getHomePosition()[0], map.getHomePosition()[1]) > 0):
                 job = 14
                 print(f"JOB: {job}")
             else:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 14): #move home
             if(movementDone == True):
-                if(current_step < len(angles)):
-                    i=current_step
-                    if(angles[i]-robot.getRotation() == 0):
-                        print("moving "+str(distances[i])+"m")
-                        send_distance(distances[i]*100)
-                        robot.move(distances[i])
-                        current_step += 1
-                    else:
-                        angle_to_rot = angles[i]-robot.getRotation()
-                        print("rotating "+str(angle_to_rot)+"°")
-                        send_angle(angle_to_rot)
-                        robot.rotate(angle_to_rot)
+                moveT, amount = map.getNextMove(robot.getRotation())
+                print(moveT)
+                print(amount)
+                if(moveT != Move_type.COMPLETE):
                     movementDone = False
+                    if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
+                        send_angle(amount)
+                        robot.rotate(amount)
+                    elif(moveT == Move_type.ANGLE and amount == 0):
+                        movementDone = True
+                    elif(moveT == Move_type.DISTANCE):
+                        send_distance(amount*100)
+                        robot.move(amount)
+                    
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
                 else:
@@ -956,26 +671,33 @@ while True:
                 job = 16
         elif(job == 16):
             if(movementDone == True):
-                robot.setPosition_xy(home_coords[0], home_coords[1])
+                robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
                 robot.matchPrevWithCurrent()
                 job = 0
-        else:
+        elif(job != 0):
             job = 0 #reset
             print(f"JOB: {job}")
-    
+        
+        if(movementDone == False and closest_distance_front < 15):
+            halt_movment()
+            print("EMERGENCY HALT - halting operation 10 seconds")
+            print("TODO: RECOVERY")
+            time.sleep(10)
+            movementDone = True
             
         
         #check if movmement is done - arduino sends 0x61 on move done. 
         readS = 0x00
-        if(test_mode == 0 and serial_motor.inWaiting() > 0):
+        if(test_mode == 0 and serial_motor.in_waiting > 0):
             readS = serial_motor.read(1)
           #  print(readS)
         if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
-            print("[WARNING] TIMEOUT")
+            print("[movement] Timeout")
         if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
             print("[movement] Done")
+            robot.matchPrevWithCurrent()
             print()
-            movementDone = True 
+            movementDone = True
             moveActionTimestamp = time.time()
             time.sleep(0.1)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
@@ -984,9 +706,25 @@ while True:
             readPos = serial_motor.read(2)
             position_report = int.from_bytes(readPos, "little")/100 #m
             battery_report = int.from_bytes(readBat, "little")*10 #mV
-            print(position_report)
-            robot.setLeg(position_report)
+            if(position_report != -1):
+                robot.setLeg(position_report)
             robot.setBatteryVoltage(battery_report)
+
+        if(test_mode == 0 and serial_ultrasonic.in_waiting > 0):
+            readUltra = serial_ultrasonic.readline().decode()
+            readUltra = readUltra.strip().split(';')[0:-1]
+            tempArr = []
+            for element in readUltra:
+                temp_dist = int(element.split(',')[1])
+                if(temp_dist == 0):
+                    temp_dist = 200
+                tempArr.append((temp_dist))
+            distances.append(tempArr)
+            if(len(distances) > 5):
+                distances.pop(0)
+            closest_distance_front = min(np.mean(distances, axis=0))
+            #print(np.mean(distances, axis=0)[0]-np.mean(distances, axis=0)[1])
+
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 

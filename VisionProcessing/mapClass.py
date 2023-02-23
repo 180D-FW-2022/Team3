@@ -48,9 +48,11 @@ class Map:
                     if (table_num) not in self.table_dict:
                         self.table_dict[table_num] = [column, row]
                         self.table_total+=1
+                        print(f"[  map  ] Table {table_num} found {self.table_dict[table_num]}")
                 if(self.gridArr[row][column] == 4):
                     self.home_coords[0] = column
                     self.home_coords[1] = row
+                    print(f"[  map  ] Home found: x: {self.home_coords[0]}, y: {self.home_coords[1]}")
 
     def _createBinaryFromMatrix(self):
         self.gridArrBinary[self.gridArrBinary > 9] = -1
@@ -91,12 +93,40 @@ class Map:
             return -1
         return 1
         
+    def _calcLeastAngle(self, angle):
+        to_ret = angle
+        if(angle > 360):
+            to_ret = angle%360
+        if(angle < -360):
+            to_ret = -1*(abs(angle)%360)
+        if(angle == 270):
+            to_ret = -90
+        if(angle == -270):
+            to_ret = 90
+        return int(to_ret)
+
     def getNextMove(self):
         if(len(self.current_move_arr)>self.current_move_index):
             to_ret = self.current_move_arr[self.current_move_index]
             mov_type = Move_type.NONE
             if(self.current_move_index%2 == 0):
                 mov_type = Move_type.ANGLE
+                to_ret = self._calcLeastAngle(to_ret)
+            else:
+                mov_type = Move_type.DISTANCE
+            self.current_move_index+=1
+            return mov_type, to_ret
+        else:
+            return Move_type.COMPLETE, 0
+        
+    def getNextMove(self, currentRotation):
+        if(len(self.current_move_arr)>self.current_move_index):
+            to_ret = self.current_move_arr[self.current_move_index]
+            mov_type = Move_type.NONE
+            if(self.current_move_index%2 == 0):
+                mov_type = Move_type.ANGLE
+                to_ret -= currentRotation
+                to_ret = self._calcLeastAngle(to_ret)
             else:
                 mov_type = Move_type.DISTANCE
             self.current_move_index+=1
@@ -230,12 +260,11 @@ class Map:
         self.gridArrPathPlan = grid_raw_margined.copy()
      
     def _calcPath(self,start_x_ind, start_y_ind, goal_x_ind, goal_y_ind):
-        grid_ArrPathPlan = Grid(matrix=self.gridArrPathPlan)
+        grid_ArrPathPlan = Grid(matrix=self.gridArrPathPlan.copy())
         start = grid_ArrPathPlan.node(start_x_ind, start_y_ind)
         end = grid_ArrPathPlan.node(goal_x_ind, goal_y_ind)
         finder = AStarFinder(diagonal_movement=DiagonalMovement.never,  heuristic=null)
         path, runs = finder.find_path(start, end, grid_ArrPathPlan)
-    #print(grid.grid_str(path=path, start=start, end=end))
         if(len(path) == 0):
             return None
         self._setMotionArray(path)
@@ -244,6 +273,7 @@ class Map:
     def _setMotionArray(self, path):
         path_dist, path_ang = self._calcMoves(path)
         self.current_move_index = 0
+        self.current_move_arr = []
         for i in range(len(path_dist)):
             self.current_move_arr.append(path_ang[i])
             self.current_move_arr.append(path_dist[i])

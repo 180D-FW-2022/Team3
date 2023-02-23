@@ -94,7 +94,8 @@ int report_dist_type = 0;
 U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
 
 void setup() {
-  //setMotorTorqueAll(0);
+  portSetup();
+  setMotorTorqueAll(0);
 
   Serial.begin(115200);
   delay(300);
@@ -104,7 +105,6 @@ void setup() {
 
   analogReference(EXTERNAL);
   u8g2.begin();
-  portSetup();
 
   stepper1.setMaxSpeed(1000);
   stepper1.setAcceleration(1200);
@@ -117,6 +117,11 @@ void setup() {
   
   stepper4.setMaxSpeed(1000);
   stepper4.setAcceleration(1200);
+
+  stepper1.setCurrentPosition(0);
+  stepper2.setCurrentPosition(0);
+  stepper3.setCurrentPosition(0);
+  stepper4.setCurrentPosition(0);
 
 }
 
@@ -426,7 +431,7 @@ String checkForSerialAngleDist(){
   }
 
 void sendDone(){
-  distance_report = 0;
+  report_dist_type = 0;
   Serial.write('a');
   delay(10);
   }

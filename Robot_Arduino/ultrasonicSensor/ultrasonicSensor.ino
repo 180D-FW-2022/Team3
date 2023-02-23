@@ -76,11 +76,10 @@ void echoCheck() { // If ping received, set the sensor distance to array.
 void oneSensorCycle() { // Sensor ping cycle complete, do something with the results.
   // The following code would be replaced with your code that does something with the ping results.
   for (uint8_t i = 0; i < SONAR_NUM; i++) {
-    Serial.print("(");
     Serial.print(i);
     Serial.print(",");
     Serial.print(cm[i]);
-    Serial.print(");");
+    Serial.print(";");
 
   }
   Serial.println();
