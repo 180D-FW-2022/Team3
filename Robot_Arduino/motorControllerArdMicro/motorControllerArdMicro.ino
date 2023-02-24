@@ -174,6 +174,11 @@ void loop() {
       stepper2.stop();
       stepper3.stop();
       stepper4.stop();
+      Serial.write('s');
+      delay(10);
+      Serial.write('s');
+      delay(10);
+      isInMotion = 0;
     }
   }
   //delay(2000);

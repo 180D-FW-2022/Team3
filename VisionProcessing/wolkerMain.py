@@ -30,7 +30,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 #custom classes improt
-from robotClass import Robot
+from robotClass import Robot, RobotMotionType
 from mapClass import Map, Move_type
 from timerClass import RepeatedTimer
 #end
@@ -50,7 +50,6 @@ scale = 1.0
 
 font = cv.FONT_HERSHEY_SIMPLEX
 
-movementDone = True
 moveActionTimestamp = time.time()
 stepCounter = 0
 
@@ -257,7 +256,7 @@ at_detector = Detector(
 plt.ion()
 fig, ax = plt.subplots()
 x, y = [],[]
-sc = ax.scatter(x,y)
+sc = ax.scatter(x,y, color = 'r')
 cmap = plt.cm.jet  # define the colormap
 cmaplist = [cmap(i) for i in range(cmap.N)]
 cmaplist[0] = (1, 1, 1, 1.0) #allowed spaces
@@ -270,7 +269,8 @@ plt.imshow(fetched_map_matrix, cmap=cmap_new, norm=norm)
 plt.colorbar(plt.cm.ScalarMappable(cmap=cmap_new, norm=norm))
 plt.xlim(-1,21)
 plt.ylim(-1,21)
-plt.draw()
+plt.show(block=False)
+
 #end
 
 
@@ -506,19 +506,20 @@ def process_april_tags(frames):
 def angle (a, b, c):
     return math.degrees(math.acos((c**2 - b**2 - a**2)/(-2.0 * a * b)))
 
-def updateDisplay(arr):     
+onlyOnce = 0
+def updateDisplay(arr, updateValues = True):     
     #display
-    x.clear()
-    y.clear()
-    for i in arr: 
-        x.append(i[0])
-    for i in arr: 
-        y.append(i[1])
+    global fetched_map_matrix, cmap_new, norm, ax1
+    if(updateValues):
+        x.clear()
+        y.clear()
+        for i in arr: 
+            x.append(i[0])
+        for i in arr: 
+            y.append(i[1])
     sc.set_offsets(np.c_[x,y])
-    #sc.axes.invert_yaxis()
-    sc.axes.invert_xaxis()
-    fig.canvas.draw_idle()     
-    plt.pause(1) 
+    fig.canvas.draw_idle()  
+    plt.pause(0.00001)   
 
 def logInfo():
     robot.printLiveData()
@@ -538,6 +539,7 @@ job = 0 #nothing
 prev_job = 0 #used for returning to previous job from obstacle detection and april tag detection jobs. 
 last_check_timestamp = 0
 closest_distance_front = 200
+lastPlotUpdate = 0
 while True:
    # os.system('clear')
     # Capture frame-by-frame
@@ -552,7 +554,7 @@ while True:
                 robotReceivedTrue()
                 print(table_to_go_to)
                 #print(table_num)
-                if(table_to_go_to <= table_count): #TODO TABLE EXISTS
+                if(map.getTablePosition(table_to_go_to)[0] != -1):
                     headingTableX = map.getTablePosition(table_to_go_to)[0]
                     headingTableY = map.getTablePosition(table_to_go_to)[1]
                     job = 10
@@ -591,9 +593,9 @@ while True:
             if(distance_to_closest < 90): #make sure to only call in linear movment. 
                 print(f"Obstacle @: {distance_to_closest}")
                 rem_dist = halt_movment()
-                if(rem_dist == -1):
+                if(rem_dist == 0):
                     rem_dist = halt_movment()
-                if(rem_dist != -1):
+                if(rem_dist != 0):
                     print("need update position to halted one.")
         elif(job == 9):
             #check for new data.
@@ -608,20 +610,19 @@ while True:
             else:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 11): #move to table
-            if(movementDone == True):
+            if(robot.isMoveDone()):
                 moveT, amount = map.getNextMove(robot.getRotation())
                 print(moveT)
                 print(amount)
                 if(moveT != Move_type.COMPLETE):
-                    movementDone = False
                     if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
                         send_angle(amount)
-                        robot.rotate(amount)
+                        robot.rotate(amount) #sets robotInMotion
                     elif(moveT == Move_type.ANGLE and amount == 0):
-                        movementDone = True
+                        robot.setMotionDone()
                     elif(moveT == Move_type.DISTANCE):
                         send_distance(amount*100)
-                        robot.move(amount)
+                        robot.move(amount) #sets robotInMotion
                     
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
@@ -641,20 +642,19 @@ while True:
             else:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 14): #move home
-            if(movementDone == True):
+            if(robot.isMoveDone()):
                 moveT, amount = map.getNextMove(robot.getRotation())
                 print(moveT)
                 print(amount)
                 if(moveT != Move_type.COMPLETE):
-                    movementDone = False
                     if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
                         send_angle(amount)
-                        robot.rotate(amount)
+                        robot.rotate(amount) #sets robotInMotion
                     elif(moveT == Move_type.ANGLE and amount == 0):
-                        movementDone = True
+                        robot.setMotionDone()
                     elif(moveT == Move_type.DISTANCE):
                         send_distance(amount*100)
-                        robot.move(amount)
+                        robot.move(amount) #sets robotInMotion
                     
                     moveActionTimestamp = time.time()
                     print("[movement] Start")
@@ -662,28 +662,43 @@ while True:
                     job = 15
                     print(f"JOB: {job}")
         elif(job == 15):
-            if(movementDone == True):
-                send_angle(-1*robot.getRotation())
-                robot.setRotation(0)
-                movementDone = False
-                moveActionTimestamp = time.time()
-                print("[movement] Start")
-                job = 16
+            if(robot.isMoveDone()):
+                if(robot.getRotation() != 0):
+                    send_angle(-1*robot.getRotation())
+                    robot.setRotation(0)
+                    robot.setMotionType(RobotMotionType.ANGLE)
+                    moveActionTimestamp = time.time()
+                    print("[movement] Start")
+                    job = 16
+                else:
+                    job = 0
+                print(f"JOB: {job}")
         elif(job == 16):
-            if(movementDone == True):
+            if(robot.isMoveDone()):
                 robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
                 robot.matchPrevWithCurrent()
                 job = 0
-        elif(job != 0):
-            job = 0 #reset
-            print(f"JOB: {job}")
+                print(f"JOB: {job}")
+                
         
-        if(movementDone == False and closest_distance_front < 15):
-            halt_movment()
-            print("EMERGENCY HALT - halting operation 10 seconds")
-            print("TODO: RECOVERY")
-            time.sleep(10)
-            movementDone = True
+        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 15 and not robot.getInObstacleStateBool()): ##TODO FIX
+            prev_job = job
+            job = 1000 #no job
+            if(halt_movment() != 1):
+                print("Inital halt failed sending again...")
+                halt_movment()
+            print("EMERGENCY HALT - will wait till obstacle clear")
+            robot.setObstacle()
+            robot.setMotionDone()
+            robot.setCurrentPositionToInMotion()
+            robot.setLeg(0)
+        elif(robot.getInObstacleStateBool() and closest_distance_front > 20):
+            robot.setObstacleClear()
+            if(prev_job == 11):
+                job = 10
+            elif(prev_job == 14):
+                job = 13
+            
             
         
         #check if movmement is done - arduino sends 0x61 on move done. 
@@ -691,13 +706,13 @@ while True:
         if(test_mode == 0 and serial_motor.in_waiting > 0):
             readS = serial_motor.read(1)
           #  print(readS)
-        if((time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
+        if((time.time()-moveActionTimestamp >= moveTimeoutConst and not robot.isMoveDone())):
             print("[movement] Timeout")
-        if((b'\x61' == readS and movementDone == False) or (time.time()-moveActionTimestamp >= moveTimeoutConst and movementDone == False)):
+        if((b'\x61' == readS and not robot.isMoveDone()) or (time.time()-moveActionTimestamp >= moveTimeoutConst and not robot.isMoveDone())):
             print("[movement] Done")
             robot.matchPrevWithCurrent()
             print()
-            movementDone = True
+            robot.setMotionDone()
             moveActionTimestamp = time.time()
             time.sleep(0.1)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
@@ -706,8 +721,10 @@ while True:
             readPos = serial_motor.read(2)
             position_report = int.from_bytes(readPos, "little")/100 #m
             battery_report = int.from_bytes(readBat, "little")*10 #mV
-            if(position_report != -1):
+            if(position_report != -1 and robot.getMotion() == RobotMotionType.DISTANCE):
                 robot.setLeg(position_report)
+            elif(not robot.getInObstacleStateBool()):
+                robot.setLeg(0)
             robot.setBatteryVoltage(battery_report)
 
         if(test_mode == 0 and serial_ultrasonic.in_waiting > 0):
@@ -724,7 +741,11 @@ while True:
                 distances.pop(0)
             closest_distance_front = min(np.mean(distances, axis=0))
             #print(np.mean(distances, axis=0)[0]-np.mean(distances, axis=0)[1])
-
+        # if(len(map.pathForPlotting) > 0):
+        #     updateDisplay([robot.getCurrentPositionInMotionXY()])
+        if(time.time() - lastPlotUpdate > 0.2):
+            lastPlotUpdate = time.time()
+            updateDisplay([robot.getCurrentPositionInMotionXYIndex()], robot.getMotion() == RobotMotionType.DISTANCE)
         if cv.waitKey(1) == ord('q'):
             break
     except Exception as e: 

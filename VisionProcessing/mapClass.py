@@ -28,6 +28,7 @@ class Map:
         self.home_coords = np.array([0,0]).astype(int)
         self.x = 0
         self.y = 0
+        self.pathForPlotting = []
 
         self.current_move_arr = []
         self.current_move_index = 0
@@ -267,6 +268,7 @@ class Map:
         path, runs = finder.find_path(start, end, grid_ArrPathPlan)
         if(len(path) == 0):
             return None
+        self.pathForPlotting = path
         self._setMotionArray(path)
         return path
     
