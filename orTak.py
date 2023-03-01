@@ -1,5 +1,5 @@
 import speech_recognition as sr
-import paho.mqtt.client as mqtt
+# import paho.mqtt.client as mqtt
 import firebase
 
 class OrTak:
@@ -32,17 +32,30 @@ class OrTak:
     def __speechToText(self):
         r = sr.Recognizer()
         text=""
+        numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
         with sr.Microphone() as source:
             while True:
                 try:
                     r.adjust_for_ambient_noise(source)
+                    print("Listening...")
                     audio = r.listen(source)
-                    text = r.recognize_google(audio, show_all=False, key=None, language="en-US")
-                    print("text:", text)
-                    numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
-                    if text in numbers:
-                        text = str(numbers.index(text) + 1)
-                    break       
+                    listened = r.recognize_google(audio, show_all=True, key=None, language="en-US")
+                    # print(listened)
+                    if listened != []:
+                        # print("text:", listened)
+                        # print(listened["alternative"][0]["transcript"])
+                        isNumber = False
+                        for i in listened["alternative"]:
+                            # print("---")
+                            # print(i["transcript"])
+                            if i["transcript"] in numbers:
+                                text = str(numbers.index(i["transcript"]) + 1)
+                                isNumber = True
+                                break
+                        # print(isNumber)
+                        if not isNumber:
+                            text = listened["alternative"][0]["transcript"]
+                        break
                 except sr.UnknownValueError:
                     print(sr.UnknownValueError)
                     print("Try again; Google Speech Recognition could not understand audio")
