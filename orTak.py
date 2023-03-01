@@ -34,9 +34,11 @@ class OrTak:
         with sr.Microphone() as source:
             while True:
                 try:
-                    r.adjust_for_ambient_noise(source)
+                    # r.adjust_for_ambient_noise(source)
+                    r.energy_threshold = 400
+                    print("Energy:",r.energy_threshold)
                     print("Listening...")
-                    audio = r.listen(source)
+                    audio = r.listen(source, timeout=5)
                     text = r.recognize_google(audio, show_all=False, key=None, language="en-US")
                     print("text:", text)
                     numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
@@ -48,6 +50,8 @@ class OrTak:
                     print("Try again; Google Speech Recognition could not understand audio")
                 except sr.RequestError as e:
                     print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
+                except Exception:
+                    print("Timeout")
         return text.lower()
     
     def __sendOrder(self):
