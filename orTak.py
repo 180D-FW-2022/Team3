@@ -1,5 +1,7 @@
 import speech_recognition as sr
 import firebase
+import LCDdisplay as lcd
+screen = lcd.LCDdisplay()
 
 class OrTak:
     #menu dictionary with items and prices
@@ -19,7 +21,7 @@ class OrTak:
     negativeResponses = ["no", "nah", "nope", "i'm good", "no thanks", "absolutely not"]
 
     def __init__(self, tableNumberArg):
-        self.tableNumber = tableNumberArg 
+        self.tableNumber = tableNumberArg
         pass
 
     def __resetTable(self):
@@ -44,7 +46,7 @@ class OrTak:
                     numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
                     if text in numbers:
                         text = str(numbers.index(text) + 1)
-                    break       
+                    break
                 except sr.UnknownValueError:
                     print(sr.UnknownValueError)
                     print("Try again; Google Speech Recognition could not understand audio")
@@ -85,8 +87,9 @@ class OrTak:
         firebase.ref.child("currentOrder").set(orderNumber)
 
 
-    def takeOrder(self): 
+    def takeOrder(self):
         print("Say \"Ready\" to begin your order!")
+        screen.displayString("Say \"Ready\" to begin your order!")
         while True:
             self.__resetTable()
             wakeWord = self.__speechToText()
@@ -94,36 +97,43 @@ class OrTak:
                 continue
             while True:
                 print("What would you like to order?")
+                screen.displayString("What would you like to order?")
                 item = self.__speechToText()
                 print(item)
                 if item in list(self.menu.keys()):
                     print("How many?")
+                    screen.displayString("How many?")
                     while True:
                         qty = self.__speechToText()
                         print("qty:", qty)
                         if qty.isnumeric():
                             break
                         print("Please repeat yourself!")
+                        screen.displayString("Please repeat yourself!")
                     self.itemArray.append((item, int(qty)))
                     self.itemCount += int(qty)
                     self.cost += int(qty) * self.menu[item]
                     pass
-                else:  
+                else:
                     print("Item not found in menu; try again")
+                    screen.displayString("Item not found in menu; try again")
                     continue
 
                 print("Would you like to order anything else?")
+                screen.displayString("Would you like to order anything else?")
                 orderMore = self.__speechToText()
                 if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
                     continue
                 if any(word in orderMore for word in self.negativeResponses):
                     print("Any special requests?")
+                    screen.displayString("Any special requests?")
                     specialRequestRaw = self.__speechToText()
                     print(specialRequestRaw)
                     if specialRequestRaw not in self.negativeResponses:
                         self.specialRequests = specialRequestRaw
                     self.__sendOrder()
                     print("Say \"Ready\" to begin your order!")
+                    screen.displayString("Say \"Ready\" to begin your order!")
                     break
 
         
