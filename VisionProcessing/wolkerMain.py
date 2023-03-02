@@ -549,6 +549,7 @@ lastPlotUpdate = 0
 initialCalibCounter = 0
 initialCalibStore = 0
 newPosReady = False
+obstacleDetectEnabled = False
 while True:
    # os.system('clear')
     # Capture frame-by-frame
