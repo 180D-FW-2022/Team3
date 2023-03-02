@@ -270,6 +270,7 @@ plt.colorbar(plt.cm.ScalarMappable(cmap=cmap_new, norm=norm))
 plt.xlim(-1,21)
 plt.ylim(-1,21)
 plt.show(block=False)
+sc.axes.invert_xaxis()
 
 #end
 
@@ -509,20 +510,24 @@ def angle (a, b, c):
 onlyOnce = 0
 def updateDisplay(arr, updateValues = True):     
     #display
-    global fetched_map_matrix, cmap_new, norm, ax1
-    if(updateValues):
-        x.clear()
-        y.clear()
-        for i in arr: 
-            x.append(i[0])
-        for i in arr: 
-            y.append(i[1])
-    sc.set_offsets(np.c_[x,y])
-    fig.canvas.draw_idle()  
-    plt.pause(0.00001)   
+    global fetched_map_matrix, cmap_new, norm
+    try:
+        if(updateValues and arr != None):
+            x.clear()
+            y.clear()
+            for i in arr: 
+                x.append(i[0])
+            for i in arr: 
+                y.append(i[1])
+        sc.set_offsets(np.c_[x,y])
+        fig.canvas.draw_idle()  
+        plt.pause(0.00001)   
+    except:
+        print("plot error")
 
 def logInfo():
     robot.printLiveData()
+
 
 rt = RepeatedTimer(1, logInfo)
 
@@ -531,6 +536,7 @@ headingTableY = 0
 current_step = 0
 distances = []
 angles = []
+calibration_angle = 0
 print("STARTING PROGRAM")
 print()
 
@@ -540,11 +546,46 @@ prev_job = 0 #used for returning to previous job from obstacle detection and apr
 last_check_timestamp = 0
 closest_distance_front = 200
 lastPlotUpdate = 0
+initialCalibCounter = 0
+initialCalibStore = 0
+newPosReady = False
 while True:
    # os.system('clear')
     # Capture frame-by-frame
     try:
-        if(job == 0 and time.time()-last_check_timestamp>2):
+        if(job == 0):#startup
+            if(initialCalibCounter > 50 and newPosReady == True):
+                initialCalibStore += calibration_angle
+                newPosReady = False
+                if(initialCalibCounter >= 60):
+                    calibAngle = int(initialCalibStore/10)
+                    print(f"Calibration Angle: {calibAngle}")
+                    send_angle(calibAngle)
+                    robot.setMotionType(RobotMotionType.ANGLE)
+                    job = 1
+                    print(f"JOB: {job}")
+                initialCalibCounter+=1
+            elif(initialCalibCounter <= 50 and newPosReady == True):
+                initialCalibStore = 0
+                newPosReady = False
+                initialCalibCounter+=1
+                
+
+        elif(job == 1):
+            if(robot.isMoveDone()):
+                if(calibration_angle == 0):
+                    robot.setRotation(180)
+                    robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
+                    robot.matchPrevWithCurrent()
+                    job = 4
+                    print(f"JOB: {job}")
+                else:
+                    initialCalibCounter = 0
+                    newPosReady = False
+                    initialCalibStore = 0
+                    job = 0
+                    print(f"JOB: {job}")
+        elif(job == 4 and time.time()-last_check_timestamp>2):
             last_check_timestamp = time.time()
             WOKerReadyTrue()
             #print(isKitchenReady())
@@ -671,17 +712,62 @@ while True:
                     print("[movement] Start")
                     job = 16
                 else:
-                    job = 0
+                    job = 4
                 print(f"JOB: {job}")
         elif(job == 16):
             if(robot.isMoveDone()):
                 robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
                 robot.matchPrevWithCurrent()
-                job = 0
+                job = 4
+                print(f"JOB: {job}")
+        elif(job == 17):
+            #move back to grid
+            dist_to_rev = 0
+            rounded_x = robot.get_x()
+            rounded_y = robot.get_y()
+            if(robot.getRotation() == 0):
+                rounded_y = float(math.floor(robot.get_y() * 2)) / 2.0
+                y_offset = abs(robot.get_y() - rounded_y)
+                print(f"y_off: {y_offset}")
+                dist_to_rev = y_offset
+            elif(robot.getRotation() == 90):
+                rounded_x = float(math.ceil(robot.get_x() * 2)) / 2.0
+                x_offset = abs(robot.get_x() - rounded_x)
+                print(f"x_off: {x_offset}")
+                dist_to_rev = x_offset
+            elif(robot.getRotation() == -90):
+                rounded_x = float(math.floor(robot.get_x() * 2)) / 2.0
+                x_offset = abs(robot.get_x() - rounded_x)
+                print(f"x_off: {x_offset}")
+                dist_to_rev = x_offset
+            elif(robot.getRotation() == 180):
+                rounded_y = float(math.ceil(robot.get_y() * 2)) / 2.0
+                y_offset = abs(robot.get_y() - rounded_y)
+                print(f"y_off: {y_offset}")
+                dist_to_rev = y_offset
+            if(dist_to_rev > 0.01):
+                send_distance(dist_to_rev*100, 'g')
+                robot.setRotation(robot.getRotation()+180) #workaround reverse
+                robot.move(dist_to_rev)
+                robot.setPosition_xy(rounded_x, rounded_y)
+                job = 18
+            else:
+                if(prev_job == 11):
+                    job = 10
+                elif(prev_job == 14):
+                    job = 13
+            print(f"JOB: {job}")
+        elif(job == 18):
+            if(robot.isMoveDone()):
+                robot.setRotation(robot.getRotation()+180) #workaround reverse undo.
+                if(prev_job == 11):
+                    job = 10
+                elif(prev_job == 14):
+                    job = 13
                 print(f"JOB: {job}")
                 
         
-        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 15 and not robot.getInObstacleStateBool()): ##TODO FIX
+        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 18 and not robot.getInObstacleStateBool()): ##TODO FIX
             prev_job = job
             job = 1000 #no job
             if(halt_movment() != 1):
@@ -692,12 +778,10 @@ while True:
             robot.setMotionDone()
             robot.setCurrentPositionToInMotion()
             robot.setLeg(0)
-        elif(robot.getInObstacleStateBool() and closest_distance_front > 20):
+        elif(robot.getInObstacleStateBool() and closest_distance_front > 22): #obstacle cleared. 
             robot.setObstacleClear()
-            if(prev_job == 11):
-                job = 10
-            elif(prev_job == 14):
-                job = 13
+            job = 17
+        
             
             
         
@@ -740,7 +824,9 @@ while True:
             if(len(distances) > 5):
                 distances.pop(0)
             closest_distance_front = min(np.mean(distances, axis=0))
-            #print(np.mean(distances, axis=0)[0]-np.mean(distances, axis=0)[1])
+            diff_dist = (np.mean(distances, axis=0)[0]-np.mean(distances, axis=0)[1])
+            calibration_angle = int(math.atan(diff_dist/25)*(180/math.pi))
+            newPosReady = True
         # if(len(map.pathForPlotting) > 0):
         #     updateDisplay([robot.getCurrentPositionInMotionXY()])
         if(time.time() - lastPlotUpdate > 0.2):

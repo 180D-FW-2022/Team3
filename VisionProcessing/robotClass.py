@@ -21,14 +21,16 @@ class Robot:
 
     def _calcLeastAngle(self, angle):
         to_ret = angle
-        if(angle > 360):
+        if(angle >= 360):
             to_ret = angle%360
-        if(angle < -360):
+        if(angle <= -360):
             to_ret = -1*(abs(angle)%360)
         if(angle == 270):
             to_ret = -90
         if(angle == -270):
             to_ret = 90
+        if(angle == -180):
+            to_ret = 180
         return int(to_ret)
 
     def leastAngleUpdate(self):
@@ -88,8 +90,8 @@ class Robot:
         
     def setCurrentPositionToInMotion(self):#rounds to 0.5 TODO REMOVE ONCE IMPLEMENT MOVE
         _pos = self.getCurrentPositionInMotionXY()
-        self.x = round(_pos[0] * 2) / 2
-        self.y = round(_pos[1] * 2) / 2
+        self.x = _pos[0]#round(_pos[0] * 2) / 2
+        self.y = _pos[1]#round(_pos[1] * 2) / 2
         self.matchPrevWithCurrent()
 
     def move(self, distance):
@@ -103,6 +105,19 @@ class Robot:
         elif(self.rot == -90):
             self.x = self.x + (distance)
         elif(self.rot == 180):
+            self.y = self.y - (distance)
+
+    def moveRev(self, distance):
+        self.in_motion = RobotMotionType.DISTANCE
+        self.prev_y = self.y
+        self.prev_x = self.x
+        if(self.rot == 180): 
+            self.y = self.y + (distance)
+        elif(self.rot == -90):
+            self.x = self.x - (distance)
+        elif(self.rot == 90):
+            self.x = self.x + (distance)
+        elif(self.rot == 0):
             self.y = self.y - (distance)
         
     def setPosition_xy(self, x, y):

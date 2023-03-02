@@ -59,6 +59,8 @@ int distance_report = 0;
 
 #define SPD_rotate 800
 
+#define TORQUE_OFF_OBSTACLE 1000
+
 
 
 //MOTOR 1: RED ARM
@@ -89,6 +91,8 @@ AccelStepper stepper4(AccelStepper::DRIVER, MOTOR_4_STEP, MOTOR_4_DIR);
 
 unsigned long last_volt_time = 0;
 unsigned long last_pos_time = 0;
+unsigned long torque_off_time = 0;
+int needTorqueOff = 0;
 int isInMotion = 0;
 int report_dist_type = 0;
 U8G2_SSD1306_128X32_UNIVISION_F_SW_I2C u8g2(U8G2_R0, A5, A4, U8X8_PIN_NONE); //OLED setup
@@ -132,13 +136,14 @@ void loop() {
   }
   if(millis()-last_pos_time > (unsigned long)posReadTime){
     last_pos_time = millis();
-    sendPositionInfo(); //TODO CONVERT STEPS LOCATION TO POS INFO.
+    sendPositionInfo();
   }
 
   if(isInMotion == 0){
   String command = checkForSerialAngleDist();
   if(command != "-1"){
     setMotorTorqueAll(1);
+    needTorqueOff = 0;
     if(command[0] == 'd'){
       command.remove(0,1);
       int angle = command.toInt();
@@ -175,10 +180,10 @@ void loop() {
       stepper3.stop();
       stepper4.stop();
       Serial.write('s');
-      delay(10);
       Serial.write('s');
-      delay(10);
       isInMotion = 0;
+      torque_off_time = millis() + TORQUE_OFF_OBSTACLE;
+      needTorqueOff = 1;
     }
   }
   //delay(2000);
@@ -188,7 +193,10 @@ if(isInMotion == 1 and checkAllSteppersStates() == 1){
   isInMotion = 0;
   sendDone();
   setMotorTorqueAll(0);
-}  
+}else if((torque_off_time > millis() && isInMotion == 0 && needTorqueOff == 1)){
+  setMotorTorqueAll(0);
+  needTorqueOff = 0;
+}
 
 stepper1.run();
 stepper2.run();

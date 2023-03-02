@@ -126,6 +126,7 @@ class Map:
             mov_type = Move_type.NONE
             if(self.current_move_index%2 == 0):
                 mov_type = Move_type.ANGLE
+                print(to_ret)
                 to_ret -= currentRotation
                 to_ret = self._calcLeastAngle(to_ret)
             else:
