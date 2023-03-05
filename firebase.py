@@ -7,16 +7,21 @@ import os
 
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+    # """ Get absolute path to resource, works for dev and for PyInstaller """
+    # try:
+    #     # PyInstaller creates a temp folder and stores path in _MEIPASS
+    #     base_path = sys._MEIPASS
+    # except Exception:
+    #     base_path = os.path.abspath(".")
 
-    return os.path.join(base_path, relative_path)
+    # print("base:", base_path)
+    # print("relative:", relative_path)
+
+    realPath = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(realPath, relative_path)
 
 keyPath = resource_path("firebase_key.json")
+print(keyPath)
 
 cred = credentials.Certificate(keyPath)
 default_app = firebase_admin.initialize_app(cred, {'databaseURL':"https://d-database-c824d-default-rtdb.firebaseio.com"})

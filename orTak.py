@@ -11,7 +11,9 @@ class OrTak:
         "milkshake": 2.5,
         "fruit": 3,
         "burger": 8,
-        "cheeseburger": 8.50
+        "cheeseburger": 8.50,
+        "potatoes": 999,
+        "marcell's potatoes": 1500
     }
     tableNumber = -99
     itemArray = []
@@ -37,23 +39,27 @@ class OrTak:
             while True:
                 try:
                     # r.adjust_for_ambient_noise(source)
-                    r.energy_threshold = 400
+                    r.energy_threshold = 800
+                    r.adjust_for_ambient_noise(source, 1) 
                     print("Energy:",r.energy_threshold)
                     print("Listening...")
-                    audio = r.listen(source, timeout=5)
+                    screen.listening()
+                    audio = r.listen(source, timeout=5, phrase_time_limit=5)
                     text = r.recognize_google(audio, show_all=False, key=None, language="en-US")
                     print("text:", text)
                     numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
                     if text in numbers:
                         text = str(numbers.index(text) + 1)
                     break
-                except sr.UnknownValueError:
-                    print(sr.UnknownValueError)
-                    print("Try again; Google Speech Recognition could not understand audio")
-                except sr.RequestError as e:
-                    print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
                 except Exception:
-                    print("Timeout")
+                    screen.tryAgain()
+                # except sr.UnknownValueError:
+                #     print(sr.UnknownValueError)
+                #     print("Try again; Google Speech Recognition could not understand audio")
+                # except sr.RequestError as e:
+                #     print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
+                # except sr.WaitTimeoutError:
+                    # print("Timeout")
         return text.lower()
     
     def __sendOrder(self):
@@ -88,53 +94,69 @@ class OrTak:
 
 
     def takeOrder(self):
-        print("Say \"Ready\" to begin your order!")
-        screen.displayString("Say \"Ready\" to begin your order!")
         while True:
-            self.__resetTable()
-            wakeWord = self.__speechToText()
-            if wakeWord != "ready":
-                continue
+            screen.clear()
+            screen.displayString("Say \"Ready\"!")
             while True:
-                print("What would you like to order?")
-                screen.displayString("What would you like to order?")
-                item = self.__speechToText()
-                print(item)
-                if item in list(self.menu.keys()):
-                    print("How many?")
-                    screen.displayString("How many?")
-                    while True:
-                        qty = self.__speechToText()
-                        print("qty:", qty)
-                        if qty.isnumeric():
-                            break
-                        print("Please repeat yourself!")
-                        screen.displayString("Please repeat yourself!")
-                    self.itemArray.append((item, int(qty)))
-                    self.itemCount += int(qty)
-                    self.cost += int(qty) * self.menu[item]
-                    pass
-                else:
-                    print("Item not found in menu; try again")
-                    screen.displayString("Item not found in menu; try again")
+                self.__resetTable()
+                wakeWord = self.__speechToText()
+                if wakeWord != "ready":
+                    screen.tryAgain()
                     continue
+                while True:
+                    print("What would you like to order?")
+                    screen.displayString("What item would", "you like?")
+                    item = self.__speechToText()
+                    print(item)
+                    if item in list(self.menu.keys()):
+                        screen.displayString(item.capitalize())
+                        print("How many?")
+                        screen.displayString("How many?")
+                        while True:
+                            qty = self.__speechToText()
+                            print("qty:", qty)
+                            if qty.isnumeric():
+                                break
+                            print("Please repeat yourself!")
+                            screen.tryAgain()
+                        self.itemArray.append((item, int(qty)))
+                        self.itemCount += int(qty)
+                        self.cost += int(qty) * self.menu[item]
+                        screen.displayString(qty + " item(s)")
+                        pass
+                    else:
+                        print("Item not found in menu; try again")
+                        screen.displayString("Item not found","Try again!")
+                        continue
 
-                print("Would you like to order anything else?")
-                screen.displayString("Would you like to order anything else?")
-                orderMore = self.__speechToText()
-                if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
-                    continue
-                if any(word in orderMore for word in self.negativeResponses):
-                    print("Any special requests?")
-                    screen.displayString("Any special requests?")
-                    specialRequestRaw = self.__speechToText()
-                    print(specialRequestRaw)
-                    if specialRequestRaw not in self.negativeResponses:
-                        self.specialRequests = specialRequestRaw
-                    self.__sendOrder()
-                    print("Say \"Ready\" to begin your order!")
-                    screen.displayString("Say \"Ready\" to begin your order!")
-                    break
+                    print("Would you like to order anything else?")
+                    orderMoreItems = False
+                    while True:
+                        screen.displayString("Any more items", "to order?")
+                        orderMore = self.__speechToText()
+                        if any(word in orderMore for word in ["yes", "sure", "yeah", "yep", "yuppers", "yipee", "yes please", "absolutely", "you bet", "roger that", "certainly"]):
+                            screen.displayString(orderMore.capitalize())
+                            orderMoreItems = True
+                            break
+                        elif any(word in orderMore for word in self.negativeResponses):
+                            screen.displayString(orderMore.capitalize())
+                            print("Any special requests?")
+                            screen.displayString("Any special","requests?")
+                            specialRequestRaw = self.__speechToText()
+                            print(specialRequestRaw)
+                            if specialRequestRaw not in self.negativeResponses:
+                                self.specialRequests = specialRequestRaw
+                            screen.displayString(self.specialRequests)
+                            self.__sendOrder()
+                            screen.displayString("Order sent!")
+                            break
+                        else:
+                            screen.tryAgain()
+                    if orderMoreItems == True:
+                        continue
+                    else:
+                        break
+                break
 
         
     def testOrder(self, itemArray):
