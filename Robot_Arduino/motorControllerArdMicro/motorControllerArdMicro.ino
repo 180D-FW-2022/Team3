@@ -42,7 +42,7 @@ int distance_report = 0;
 
 
 #define batReadTime 1000
-#define posReadTime 500
+#define posReadTime 50
 
 #define COMM_TIMEOUT 100
 //COLORS

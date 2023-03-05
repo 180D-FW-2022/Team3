@@ -225,8 +225,8 @@ if(average[0] < 5.0):
     cam_id_bottom = cam_id
     cam_id = temp
 
-print("PLEASE REMOVE LEFT CAP and press enter")
-input()
+# print("PLEASE REMOVE LEFT CAP and press enter")
+# input()
 
 cap = cv.VideoCapture(cam_id)
 if not cap.isOpened():
@@ -450,7 +450,7 @@ def send_angle(angle):
         serial_motor.write(bytes_data)
         time.sleep(0.1)
 
-def process_april_tags(frames):
+def process_april_tags(frames, tag_id_search):
     angleStore = 0
     xStore = 0
     eulerRotx = 0
@@ -465,7 +465,7 @@ def process_april_tags(frames):
         wid = img_size[1]
         hei = img_size[0]
         for i in result:
-            if(len(result)>0 and i.tag_id == 0):#i.tag_id == test_tag_id):#):
+            if(len(result)>0 and i.tag_id == tag_id_search):#i.tag_id == test_tag_id):#):
                 total_results += 1
                 x_offset = 0
                 cent = i.center
@@ -484,6 +484,62 @@ def process_april_tags(frames):
                 angle = -1*int(math.atan(unofficial_tag_position[2]/unofficial_tag_position[0])*(180/math.pi))
                 angle_temp = angle
                 angle = int(90-abs(angle))
+                if(angle_temp > 0):
+                    angle = angle * -1
+
+                distance = abs(int(unofficial_tag_position[2]*100*distanceScale)) 
+
+                angleStore += angle
+                distanceStore += distance
+                xStore += x_offset
+
+                #print("[ angle  ]: "+str(angle))
+                #print("[distance]: "+str(distance))
+                cv.circle(frame,(int(cent[0]), int(cent[1])), 50, (0,0,255), -1)
+                cv.putText(frame, str(i.tag_id), (int(cent[0]), int(cent[1])), font, 3, (0, 0, 0), 8, cv.LINE_4)
+    if(total_results > 0):
+        angleStore = int(angleStore/total_results)
+        distanceStore = int(distanceStore/total_results)
+        xStore = float(xStore/total_results)
+        eulerRotx = int(eulerRotx/total_results)
+    return xStore, eulerRotx, angleStore, distanceStore
+
+
+def process_april_tags_vertical(frames, tag_id_search):
+    angleStore = 0
+    xStore = 0
+    eulerRotx = 0
+    distanceStore = 0
+    total_results = 0
+    for frame in frames: #for each detected aprilTag. 
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        gray = rescale_frame(gray, 100/scale)
+        result = at_detector.detect(gray, True, (978/scale, 978/scale, 930/scale, 524/scale), 0.171)
+        img_size = gray.shape
+
+        wid = img_size[1]
+        hei = img_size[0]
+        for i in result:
+            if(len(result)>0 and i.tag_id == tag_id_search):#i.tag_id == test_tag_id):#):
+                total_results += 1
+                x_offset = 0
+                cent = i.center
+                Pose_R = i.pose_R
+                Pose_T = i.pose_t
+                rot_matrix = R.from_matrix(Pose_R)
+                eulers = rot_matrix.as_euler('zxy', degrees=True)
+                #print("Euler Angles: ")
+                #print(eulers)
+                eulerRotx += eulers[1]
+                # print(i)
+                unofficial_tag_position = Pose_T #P @ Pose_R.T @ (-1 * Pose_T)
+                unofficial_tag_position[1] = -1*unofficial_tag_position[1]
+                #print(f"relative angle: {Pose_R}")
+               # print("x: "+str(unofficial_tag_position[0]) + ", y: "+ str(unofficial_tag_position[1])+ ", z: "+ str(unofficial_tag_position[2]))
+                x_offset = unofficial_tag_position[1]
+                angle = -1*int(math.atan(unofficial_tag_position[1]/unofficial_tag_position[0])*(180/math.pi))
+                angle_temp = angle
+                angle = int(abs(angle))
                 if(angle_temp > 0):
                     angle = angle * -1
 
@@ -554,6 +610,25 @@ while True:
    # os.system('clear')
     # Capture frame-by-frame
     try:
+        if(job == -5): #calibration sequence
+            countFrame = 0
+            frames_top = []
+            while (countFrame < 5):
+                ret, frame_top = cap.read()
+                if(ret):
+                    countFrame+=1
+                    frames_top.append(frame_top)
+            x_offset, euler_rotation_x, angle, distance = process_april_tags_vertical(frames_top, tag_id_search=1)  
+            print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
+            if(x_offset > 0):
+                send_distance(abs(x_offset)*100,'w')
+            if(x_offset > 0):
+                send_distance(abs(x_offset)*100,'b')
+            cv.imshow('frame', frames_top[0]) 
+            cv.waitKey(1)
+            job = -4
+            print(f"JOB: {job}")
+
         if(job == 0):#startup
             if(initialCalibCounter > 50 and newPosReady == True):
                 initialCalibStore += calibration_angle
@@ -570,15 +645,20 @@ while True:
                 initialCalibStore = 0
                 newPosReady = False
                 initialCalibCounter+=1
-                
-
         elif(job == 1):
             if(robot.isMoveDone()):
                 if(calibration_angle == 0):
                     robot.setRotation(180)
                     robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
                     robot.matchPrevWithCurrent()
-                    job = 4
+                    move_amount = 40-closest_distance_front
+                    if(move_amount > 0):
+                        send_distance(move_amount, 'g')
+                    elif(move_amount < 0):
+                        send_distance(move_amount)
+                    robot.setMotionType(RobotMotionType.DISTANCE)
+                    print("Setting Position")
+                    job = 2
                     print(f"JOB: {job}")
                 else:
                     initialCalibCounter = 0
@@ -586,6 +666,10 @@ while True:
                     initialCalibStore = 0
                     job = 0
                     print(f"JOB: {job}")
+        elif(job == 2):
+            if(robot.isMoveDone()):
+                job = 4
+                print(f"JOB: {job}")
         elif(job == 4 and time.time()-last_check_timestamp>2):
             last_check_timestamp = time.time()
             WOKerReadyTrue()
@@ -605,18 +689,6 @@ while True:
                     print("Table doesn't exist")
             else:
                 print("No action need to be done")
-        elif(job == 5):#check april location
-            countFrame = 0
-            frames_top = []
-            while (countFrame < 5):
-                ret, frame_top = cap.read()
-                if(ret):
-                    countFrame+=1
-                    frames_top.append(frame_top)
-            x_offset, euler_rotation_x, angle, distance = process_april_tags(frames_top)  
-            print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
-            #cv.imshow('frame', frames_top[0]) 
-            #cv.waitKey(1)
         elif(job  == 6):
             distance_to_closest = 0
             procseedStero = 0
