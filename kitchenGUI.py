@@ -134,10 +134,10 @@ class KitchenGUI(MDApp):
     def setNewTable(self, event):
         if firebase.ref.child("readyOrders").get() == None:
                 return
-        if self.initial[0] == True:
-            print("initial1")
-            self.initial[0] = False
-            return
+        # if self.initial[0] == True:
+        #     print("initial1")
+        #     self.initial[0] = False
+        #     return
         firstOrder = list(firebase.ref.child("readyOrders").get().keys())[0]
         tableNumber = firebase.ref.child("readyOrders").get()[firstOrder]["tableNumber"]
         firebase.ref.child("newTableNumber").set(tableNumber)

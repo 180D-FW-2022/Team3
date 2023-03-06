@@ -40,7 +40,7 @@ class OrTak:
                 try:
                     # r.adjust_for_ambient_noise(source)
                     r.energy_threshold = 800
-                    r.adjust_for_ambient_noise(source, 1) 
+                    r.adjust_for_ambient_noise(source, 2) 
                     print("Energy:",r.energy_threshold)
                     print("Listening...")
                     screen.listening()
@@ -60,6 +60,7 @@ class OrTak:
                 #     print("Try again; Could not request results from Google Speech Recognition service; {0}".format(e))
                 # except sr.WaitTimeoutError:
                     # print("Timeout")
+                    pass
         return text.lower()
     
     def __sendOrder(self):
@@ -141,7 +142,7 @@ class OrTak:
                         elif any(word in orderMore for word in self.negativeResponses):
                             screen.displayString(orderMore.capitalize())
                             print("Any special requests?")
-                            screen.displayString("Any special","requests?")
+                            screen.displayString("Any special", "requests?")
                             specialRequestRaw = self.__speechToText()
                             print(specialRequestRaw)
                             if specialRequestRaw not in self.negativeResponses:
@@ -152,6 +153,7 @@ class OrTak:
                             break
                         else:
                             screen.tryAgain()
+                            pass
                     if orderMoreItems == True:
                         continue
                     else:
@@ -161,7 +163,5 @@ class OrTak:
         
     def testOrder(self, itemArray):
         self.itemArray = itemArray
-        for i in itemArray:
-            self.itemCount += i[1]
         self.cost = 9999
         self.__sendOrder()
