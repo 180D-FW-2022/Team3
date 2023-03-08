@@ -32,6 +32,9 @@ class Robot:
         if(angle == -180):
             to_ret = 180
         return int(to_ret)
+    
+    def calcDistToPoint(self, x, y):
+        return ((self.x-x)*(self.x-x)+(self.y-y)*(self.y-y))**0.5
 
     def leastAngleUpdate(self):
         self.rot = self._calcLeastAngle(self.rot)

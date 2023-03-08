@@ -55,7 +55,7 @@ int distance_report = 0;
 #define stepMargin 200L
 #define stepMarginRot 200
 
-#define SPD_linear 1200
+#define SPD_linear 3000
 
 #define SPD_rotate 800
 
@@ -128,8 +128,8 @@ void setup() {
   stepper4.setCurrentPosition(0);
 
 }
-
 void loop() {
+
   if(millis()-last_volt_time > (unsigned long)batReadTime && isInMotion == 0){
     last_volt_time = millis();
     readAndPrintVoltage();
@@ -323,6 +323,10 @@ void moveRobot(double distanceMM, int dirColor, int spd){
   stepper2.setCurrentPosition(0);
   stepper3.setCurrentPosition(0);
   stepper4.setCurrentPosition(0);
+  stepper1.setMaxSpeed(spd);
+  stepper2.setMaxSpeed(spd);
+  stepper3.setMaxSpeed(spd);
+  stepper4.setMaxSpeed(spd);
   isInMotion = 1;
   distance_report = 0;
   long int steps = long(movLin_stepMM * double(distanceMM));

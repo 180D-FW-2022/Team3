@@ -757,24 +757,32 @@ while True:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 14): #move home
             if(robot.isMoveDone()):
-                moveT, amount = map.getNextMove(robot.getRotation())
-                print(moveT)
-                print(amount)
-                if(moveT != Move_type.COMPLETE):
-                    if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
-                        send_angle(amount)
-                        robot.rotate(amount) #sets robotInMotion
-                    elif(moveT == Move_type.ANGLE and amount == 0):
-                        robot.setMotionDone()
-                    elif(moveT == Move_type.DISTANCE):
-                        send_distance(amount*100)
-                        robot.move(amount) #sets robotInMotion
-                    
-                    moveActionTimestamp = time.time()
-                    print("[movement] Start")
-                else:
-                    job = 15
+                if(robot.calcDistToPoint(map.getHomePosition()[0], map.getHomePosition()[1]) < 2.0):
+                    job = 25
                     print(f"JOB: {job}")
+                else:
+                    moveT, amount = map.getNextMove(robot.getRotation())
+                    print(moveT)
+                    print(amount)
+                    if(moveT != Move_type.COMPLETE):
+                        if(moveT == Move_type.ANGLE and amount != 0): #if rotate, and there is angle to rotate. 
+                            send_angle(amount)
+                            robot.rotate(amount) #sets robotInMotion
+                        elif(moveT == Move_type.ANGLE and amount == 0):
+                            robot.setMotionDone()
+                        elif(moveT == Move_type.DISTANCE):
+                            send_distance(amount*100)
+                            robot.move(amount) #sets robotInMotion
+                        
+                        moveActionTimestamp = time.time()
+                        print("[movement] Start")
+                    else:
+                        job = 15
+                        print(f"JOB: {job}")
+            else:
+                if(robot.calcDistToPoint(map.getHomePosition()[0], map.getHomePosition()[1]) < 2.0):
+                    halt_movment()
+                    job = 25
         elif(job == 15):
             if(robot.isMoveDone()):
                 if(robot.getRotation() != 0):
@@ -829,6 +837,9 @@ while True:
                     job = 10
                 elif(prev_job == 14):
                     job = 13
+                else:
+                    job = 0
+                    print("NEED RELOC - RESETTING")
             print(f"JOB: {job}")
         elif(job == 18):
             if(robot.isMoveDone()):
@@ -837,6 +848,70 @@ while True:
                     job = 10
                 elif(prev_job == 14):
                     job = 13
+                print(f"JOB: {job}")
+        elif(job == 25):
+            countFrame = 0
+            frames_top = []
+            while (countFrame < 5):
+                ret, frame_top = cap.read()
+                if(ret):
+                    countFrame+=1
+                    frames_top.append(frame_top)
+            x_offset, euler_rotation_x, angle, distance = process_april_tags_vertical(frames_top, tag_id_search=1)  
+            print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
+            if(x_offset > 0):
+                send_distance(abs(x_offset)*100,'b')
+            if(x_offset > 0):
+                send_distance(abs(x_offset)*100,'w')
+            robot.setMotionType(RobotMotionType.DISTANCE)
+            cv.imshow('frame', frames_top[0]) 
+            cv.waitKey(1)
+            job = 26
+            print(f"JOB: {job}")
+        elif(job == 26):
+            if(robot.isMoveDone()):
+                countFrame = 0
+                frames_top = []
+                while (countFrame < 5):
+                    ret, frame_top = cap.read()
+                    if(ret):
+                        countFrame+=1
+                        frames_top.append(frame_top)
+                x_offset, euler_rotation_x, angle, distance = process_april_tags_vertical(frames_top, tag_id_search=1)  
+                print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
+                if(distance > 40):
+                    send_distance(abs(distance-40))
+                robot.setMotionType(RobotMotionType.DISTANCE)
+                cv.imshow('frame', frames_top[0]) 
+                cv.waitKey(1)
+                job = 27
+                print(f"JOB: {job}")
+        elif(job == 27):
+            if(robot.isMoveDone()):
+                job = 28
+                print(f"JOB: {job}")
+        elif(job == 28):
+            countFrame = 0
+            frames_top = []
+            while (countFrame < 5):
+                ret, frame_top = cap.read()
+                if(ret):
+                    countFrame+=1
+                    frames_top.append(frame_top)
+            x_offset, euler_rotation_x, angle, distance = process_april_tags_vertical(frames_top, tag_id_search=1)  
+            print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
+            if(x_offset > 0.0):
+                send_distance(abs(x_offset)*100,'b')
+            if(x_offset > 0.0):
+                send_distance(abs(x_offset)*100,'w')
+            robot.setMotionType(RobotMotionType.DISTANCE)
+            cv.imshow('frame', frames_top[0]) 
+            cv.waitKey(1)
+            job = 29
+            print(f"JOB: {job}")
+        elif(job == 29):
+            if(robot.isMoveDone()):
+                job = 4
                 print(f"JOB: {job}")
                 
         
