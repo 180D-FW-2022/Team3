@@ -1,0 +1,8 @@
+firebase_admin==6.0.1
+matplotlib==3.3.2
+numpy==1.23.4
+opencv_python==4.6.0.66
+pathfinding==1.0.1
+pupil_apriltags==1.0.4.post8
+pyserial==3.5
+scipy==1.5.2
