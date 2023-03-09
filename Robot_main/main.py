@@ -606,6 +606,7 @@ initialCalibCounter = 0
 initialCalibStore = 0
 newPosReady = False
 obstacleDetectEnabled = False
+calibTime = time.time()
 
 TEST_MODE = 1
 DEMO_MODE = 1
@@ -657,15 +658,16 @@ while True:
                     robot.setPosition_xy(map.getHomePosition()[0], map.getHomePosition()[1])
                     robot.matchPrevWithCurrent()
                     move_amount = 40-closest_distance_front
-                    if(move_amount > 3):
+                    if(move_amount > 5):
                         send_distance(move_amount, 'g')
                         robot.setMotionType(RobotMotionType.DISTANCE)
-                    elif(move_amount < 3):
+                    elif(move_amount < 5):
                         send_distance(move_amount)
                         robot.setMotionType(RobotMotionType.DISTANCE)
                     else:
                         robot.setMotionDone()
                     print("Setting Position")
+                    calibTime = time.time()+4
                     job = 2
                     print(f"JOB: {job}")
                 else:
@@ -675,7 +677,7 @@ while True:
                     job = 0
                     print(f"JOB: {job}")
         elif(job == 2):
-            if(robot.isMoveDone()):
+            if(robot.isMoveDone() or calibTime>time.time()):
                 time.sleep(0.5)
                 job = 4
                 print(f"JOB: {job}")
