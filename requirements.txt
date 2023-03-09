@@ -1,0 +1,9 @@
+firebase_admin==5.2.0
+keyboard==0.13.5
+Kivy==2.1.0
+kivymd==1.1.1
+numpy==1.22.3
+paho_mqtt==1.6.1
+pyttsx3==2.90
+smbus==1.1.post2
+SpeechRecognition==3.8.1
