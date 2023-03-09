@@ -38,6 +38,7 @@ class gridLayout(App):
         wokerStation = Button(text = "WOKer", background_color=[1,1,1,1]) #black
         deselect = Button(text = "Deselect", background_color = white) #white
         loadOldMap = Button(text = "Load Map", background_color = pink) 
+        clearAll = Button(text = "Clear All", background_color = black) 
 
         tableButton.id="Table"
         obstacleButton.id="Obstacle"
@@ -46,6 +47,7 @@ class gridLayout(App):
         doneBtn.id = "Done"
         deselect.id = "Deselect"
         loadOldMap.id = "Load Map"
+        clearAll.id = "Clear All"
 
         layout.add_widget(tableButton)
         layout.add_widget(obstacleButton)
@@ -53,6 +55,7 @@ class gridLayout(App):
         layout.add_widget(wokerStation)
         layout.add_widget(deselect)
         layout.add_widget(loadOldMap)
+        layout.add_widget(clearAll)
 
         doneBtn.bind(on_release = self.buttonPress)
         tableButton.bind(on_release = self.buttonPress)
@@ -61,8 +64,9 @@ class gridLayout(App):
         tableNumber.bind(on_release = self.buttonPress)
         deselect.bind(on_release = self.buttonPress)
         loadOldMap.bind(on_release = self.oldMap)
+        clearAll.bind(on_release = self.clearAll)
 
-        for i in range(4):
+        for i in range(3):
             dummyBtn = Button(background_color=[1,1,1,1])
             layout.add_widget(dummyBtn)
 
@@ -75,7 +79,7 @@ class gridLayout(App):
         return layout
 
     def build(self):
-        global layout
+        global mat, layout
         Window.fullscreen = 'auto'
         #layout = GridLayout(cols=20)
         #print(Window.width, Window.height)
@@ -86,6 +90,21 @@ class gridLayout(App):
             layout.add_widget(btn)
             btn.bind(on_release = self.callback)
         
+        return self.otherButtons(layout)
+
+    def clearAll(self, instace):
+        global mat, layout, tableNum, finalString
+        layout.clear_widgets()
+        Window.fullscreen = 'auto'
+        for i in range(400):
+            btn = Button(background_color=[255,255,255,1], size_hint_x = None, width = 150, height = 150) #size = ((100,100))
+            btn.id=str(i)
+            layout.add_widget(btn)
+            btn.bind(on_release = self.callback)
+        mat = np.zeros((20,20), dtype=int)
+        #print(mat)
+        finalString = ""
+        #print("matrix")
         return self.otherButtons(layout)
 
     def oldMap(self, instance):
@@ -143,7 +162,7 @@ class gridLayout(App):
         return self.otherButtons(layout)
 
     def buttonPress(self, instance):
-        global color, code, finalString, tableNum
+        global mat, color, code, finalString, tableNum
         print(instance.id)
         if(instance.id == "Table"):
             color = green
@@ -160,7 +179,9 @@ class gridLayout(App):
             color = white
             code = 0
         elif(instance.id == "Done"):
-            Window.close()
+            #Window.close()
+            print("matrix at done")
+            print(mat)
             for line in mat:
                 for element in line:
                     if finalString == "":
@@ -188,14 +209,15 @@ class gridLayout(App):
                 if(event.background_color == blue):
                     event.background_color = green
                     tableNum = tableNum - 1
+                    event.text = ""
                     mat[int(a)][int(b)] = int(1)
                 elif(event.background_color == black):
                     event.background_color = color
                     isWokerPlaced = False
-                    mat[int(a)][int(b)] = int(1)
+                    mat[int(a)][int(b)] = 0
                 else:
                     event.background_color = color
-                    mat[int(a)][int(b)] = int(1)
+                    mat[int(a)][int(b)] = 0
         elif(color == blue):
             if(event.background_color == green):
                 event.background_color = color
