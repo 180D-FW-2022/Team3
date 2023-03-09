@@ -142,6 +142,10 @@ void loop() {
   if(isInMotion == 0){
   String command = checkForSerialAngleDist();
   if(command != "-1"){
+    stepper1.setAcceleration(1200);
+    stepper2.setAcceleration(1200);
+    stepper3.setAcceleration(1200);
+    stepper4.setAcceleration(1200);
     setMotorTorqueAll(1);
     needTorqueOff = 0;
     if(command[0] == 'd'){
@@ -175,6 +179,10 @@ void loop() {
   }else if(Serial.available() > 0){
     char d = Serial.read();
     if(d == 'x'){
+      stepper1.setAcceleration(10000);
+      stepper2.setAcceleration(10000);
+      stepper3.setAcceleration(10000);
+      stepper4.setAcceleration(10000);
       stepper1.stop();
       stepper2.stop();
       stepper3.stop();
