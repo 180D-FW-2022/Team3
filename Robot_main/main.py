@@ -966,10 +966,9 @@ while True:
         if((b'\x61' == readS and not robot.isMoveDone()) or (time.time()-moveActionTimestamp >= moveTimeoutConst and not robot.isMoveDone())):
             print("[movement] Done")
             robot.matchPrevWithCurrent()
-            print()
             robot.setMotionDone()
             moveActionTimestamp = time.time()
-            time.sleep(0.1)
+            time.sleep(0.3)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
             readS = 0x00
             readBat = serial_motor.read(2)
