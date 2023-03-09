@@ -55,11 +55,11 @@ int distance_report = 0;
 #define stepMargin 200L
 #define stepMarginRot 200
 
-#define SPD_linear 3000
+#define SPD_linear 2000
 
 #define SPD_rotate 800
 
-#define TORQUE_OFF_OBSTACLE 1000
+#define TORQUE_OFF_OBSTACLE 1300
 
 
 
@@ -111,16 +111,16 @@ void setup() {
   u8g2.begin();
 
   stepper1.setMaxSpeed(1000);
-  stepper1.setAcceleration(1200);
+  stepper1.setAcceleration(2000);
   
   stepper2.setMaxSpeed(1000);
-  stepper2.setAcceleration(1200);
+  stepper2.setAcceleration(2000);
 
   stepper3.setMaxSpeed(1000);
-  stepper3.setAcceleration(1200);
+  stepper3.setAcceleration(2000);
   
   stepper4.setMaxSpeed(1000);
-  stepper4.setAcceleration(1200);
+  stepper4.setAcceleration(2000);
 
   stepper1.setCurrentPosition(0);
   stepper2.setCurrentPosition(0);
@@ -142,10 +142,6 @@ void loop() {
   if(isInMotion == 0){
   String command = checkForSerialAngleDist();
   if(command != "-1"){
-    stepper1.setAcceleration(1200);
-    stepper2.setAcceleration(1200);
-    stepper3.setAcceleration(1200);
-    stepper4.setAcceleration(1200);
     setMotorTorqueAll(1);
     needTorqueOff = 0;
     if(command[0] == 'd'){
@@ -179,10 +175,6 @@ void loop() {
   }else if(Serial.available() > 0){
     char d = Serial.read();
     if(d == 'x'){
-      stepper1.setAcceleration(10000);
-      stepper2.setAcceleration(10000);
-      stepper3.setAcceleration(10000);
-      stepper4.setAcceleration(10000);
       stepper1.stop();
       stepper2.stop();
       stepper3.stop();

@@ -90,6 +90,7 @@ class Map:
         x_ind = self.distanceToIndex(x)
         y_ind = self.distanceToIndex(y)
         path = self._calcPath(self.x, self.y, x_ind, y_ind) #y-start, x-start, y-end, x-end
+        print(path)
         if(path == None):
             return -1
         return 1
@@ -275,6 +276,7 @@ class Map:
     
     def _setMotionArray(self, path):
         path_dist, path_ang = self._calcMoves(path)
+        print(f"PD: {path_dist}, PA: {path_ang}")
         self.current_move_index = 0
         self.current_move_arr = []
         for i in range(len(path_dist)):
@@ -315,23 +317,27 @@ class Map:
         arr_distance = []
         arr_angle_clean = []
         counter = 0
-        for j in range(1,len(arr_angle)):
-            counter+= 1
-            if(arr_angle[j] == ang_prev and counter+1 <= len(arr_angle)):
-                ang_prev = arr_angle[j]
-                distance+=0.5   
-                if(counter+1 == len(arr_angle)):
+        if(len(arr_angle) == 1):
+            arr_angle_clean.append(arr_angle[0])
+            arr_distance.append(0.5)
+        else:
+            for j in range(1,len(arr_angle)):
+                counter+= 1
+                if(arr_angle[j] == ang_prev and counter+1 <= len(arr_angle)):
+                    ang_prev = arr_angle[j]
+                    distance+=0.5   
+                    if(counter+1 == len(arr_angle)):
+                        distance+=0.5
+                        arr_distance.append(distance)
+                        arr_angle_clean.append(ang_prev)
+                        distance = 0
+                else:    
                     distance+=0.5
                     arr_distance.append(distance)
                     arr_angle_clean.append(ang_prev)
+                    if(counter+1 == len(arr_angle)):
+                        arr_distance.append(0.5)
+                        arr_angle_clean.append(arr_angle[j])
                     distance = 0
-            else:    
-                distance+=0.5
-                arr_distance.append(distance)
-                arr_angle_clean.append(ang_prev)
-                if(counter+1 == len(arr_angle)):
-                    arr_distance.append(0.5)
-                    arr_angle_clean.append(arr_angle[j])
-                distance = 0
-                ang_prev = arr_angle[j]
+                    ang_prev = arr_angle[j]
         return arr_distance, arr_angle_clean

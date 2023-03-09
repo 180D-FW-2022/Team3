@@ -608,6 +608,7 @@ newPosReady = False
 obstacleDetectEnabled = False
 
 TEST_MODE = 1
+DEMO_MODE = 1
 
 while True:
    # os.system('clear')
@@ -675,6 +676,7 @@ while True:
                     print(f"JOB: {job}")
         elif(job == 2):
             if(robot.isMoveDone()):
+                time.sleep(0.5)
                 job = 4
                 print(f"JOB: {job}")
         elif(job == 4 and time.time()-last_check_timestamp>2):
@@ -767,7 +769,7 @@ while True:
                 print("Error with path - NEED JOB TO FIX")
         elif(job == 14): #move home
             if(robot.isMoveDone()):
-                if(robot.calcDistToPoint(map.getHomePosition()[0], map.getHomePosition()[1]) < 2.0 and not TEST_MODE):
+                if(robot.calcDistToPoint(map.getHomePosition()[0], map.getHomePosition()[1]) < 2.0 and not DEMO_MODE):
                     job = 25
                     print(f"JOB: {job}")
                 else:
@@ -789,7 +791,7 @@ while True:
                     else:
                         job = 15
                         print(f"JOB: {job}")
-            else:
+            elif(not DEMO_MODE):
                 if(robot.calcDistToPoint(map.getHomePosition()[0], map.getHomePosition()[1]) < 2.0):
                     halt_movment()
                     job = 25
@@ -819,24 +821,24 @@ while True:
             if(robot.getRotation() == 0):
                 rounded_y = float(math.floor(robot.get_y() * 2)) / 2.0
                 y_offset = abs(robot.get_y() - rounded_y)
-                print(f"y_off: {y_offset}")
+                print(f"y_off: {y_offset}, y_rounded: {rounded_y}")
                 dist_to_rev = y_offset
             elif(robot.getRotation() == 90):
                 rounded_x = float(math.ceil(robot.get_x() * 2)) / 2.0
                 x_offset = abs(robot.get_x() - rounded_x)
-                print(f"x_off: {x_offset}")
+                print(f"x_off: {x_offset}, x_rounded: {rounded_x}")
                 dist_to_rev = x_offset
             elif(robot.getRotation() == -90):
                 rounded_x = float(math.floor(robot.get_x() * 2)) / 2.0
                 x_offset = abs(robot.get_x() - rounded_x)
-                print(f"x_off: {x_offset}")
+                print(f"x_off: {x_offset}, x_rounded: {rounded_x}")
                 dist_to_rev = x_offset
             elif(robot.getRotation() == 180):
                 rounded_y = float(math.ceil(robot.get_y() * 2)) / 2.0
                 y_offset = abs(robot.get_y() - rounded_y)
-                print(f"y_off: {y_offset}")
+                print(f"y_off: {y_offset}, y_rounded: {rounded_y}")
                 dist_to_rev = y_offset
-            if(dist_to_rev > 0.01):
+            if(dist_to_rev > 0.1):
                 send_distance(dist_to_rev*100, 'g')
                 robot.setRotation(robot.getRotation()+180) #workaround reverse
                 robot.move(dist_to_rev)
@@ -854,11 +856,11 @@ while True:
         elif(job == 18):
             if(robot.isMoveDone()):
                 robot.setRotation(robot.getRotation()+180) #workaround reverse undo.
-                if(prev_job <= 11):
+                if(prev_job == 11):
                     job = 10
-                elif(prev_job <= 14):
+                elif(prev_job == 14):
                     job = 13
-                print(f"JOB: {job}")
+                print(f"JOB: {job}, P-JOB: {prev_job}")
         elif(job == 25):
             countFrame = 0
             frames_top = []
@@ -871,12 +873,18 @@ while True:
             print(f"X-OFFSET: {x_offset}, angle: {angle}, Distance: {distance}, Euler-Rot: {euler_rotation_x}")  
             if(x_offset > 0):
                 send_distance(abs(x_offset)*100,'b')
-            if(x_offset > 0):
+                robot.setMotionType(RobotMotionType.DISTANCE)
+                cv.imshow('frame', frames_top[0]) 
+                cv.waitKey(1)
+                job = 26
+            elif(x_offset < 0):
                 send_distance(abs(x_offset)*100,'w')
-            robot.setMotionType(RobotMotionType.DISTANCE)
-            cv.imshow('frame', frames_top[0]) 
-            cv.waitKey(1)
-            job = 26
+                robot.setMotionType(RobotMotionType.DISTANCE)
+                cv.imshow('frame', frames_top[0]) 
+                cv.waitKey(1)
+                job = 26
+            else:
+                job = 25
             print(f"JOB: {job}")
         elif(job == 26):
             if(robot.isMoveDone()):
@@ -925,20 +933,25 @@ while True:
                 print(f"JOB: {job}")
                 
         
-        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 18 and not robot.getInObstacleStateBool() and (job > 4)): ##TODO FIX
-            prev_job = job
+        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 35 and not robot.getInObstacleStateBool() and (job > 4)):
+            if(job != 1000): #if not no job
+                prev_job = job
             job = 1000 #no job
+            halt_success = 1
             if(halt_movment() != 1):
                 print("Inital halt failed sending again...")
-                halt_movment()
+                halt_success = halt_movment()
             print("EMERGENCY HALT - will wait till obstacle clear")
             robot.setObstacle()
             robot.setMotionDone()
             robot.setCurrentPositionToInMotion()
             robot.setLeg(0)
-        elif(robot.getInObstacleStateBool() and closest_distance_front > 22): #obstacle cleared. 
+                
+            time.sleep(1.5)
+        elif(robot.getInObstacleStateBool() and closest_distance_front > 40): #obstacle cleared. 
             robot.setObstacleClear()
             job = 17
+            print(f"JOB: {job}, P-JOB: {prev_job}")
         
             
             
