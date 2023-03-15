@@ -48,7 +48,7 @@ class LCDdisplay:
         self.mylcd.lcd_display_string("   Please try", 1)
         self.mylcd.lcd_display_string("     again!", 2)
         sleep(1)
-        print(self.currentTopString, self.currentBottomString)
+        # print(self.currentTopString, self.currentBottomString)
         self.displayString(self.currentTopString, self.currentBottomString)
         # self.displayLineOne(self.currentTopString)
         # self.displayLineTwo(self.currentBottomString)

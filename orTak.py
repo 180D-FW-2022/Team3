@@ -40,18 +40,19 @@ class OrTak:
                 try:
                     # r.adjust_for_ambient_noise(source)
                     r.energy_threshold = 800
-                    r.adjust_for_ambient_noise(source, 2) 
+                    r.adjust_for_ambient_noise(source, 1) 
                     print("Energy:",r.energy_threshold)
                     print("Listening...")
                     screen.listening()
-                    audio = r.listen(source, timeout=5, phrase_time_limit=5)
-                    text = r.recognize_google(audio, show_all=False, key=None, language="en-US")
+                    audio = r.listen(source, timeout=5, phrase_time_limit=3)
+                    text = r.recognize_google_cloud(audio, show_all=False, credentials_json="credentials_google_speech.json", language="en-US", preferred_phrases=["ready", "four", "two"])
                     print("text:", text)
                     numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
                     if text in numbers:
                         text = str(numbers.index(text) + 1)
                     break
-                except Exception:
+                except Exception as e:
+                    print(e)
                     screen.tryAgain()
                 # except sr.UnknownValueError:
                 #     print(sr.UnknownValueError)
@@ -61,7 +62,7 @@ class OrTak:
                 # except sr.WaitTimeoutError:
                     # print("Timeout")
                     pass
-        return text.lower()
+        return (text.lower()).strip()
     
     def __sendOrder(self):
         # Example string; TN:1;Items:Ham-1,Fries-2,CM-3;Tot:9;Cost:63.76;SR:I am lactose intolerant
@@ -101,6 +102,11 @@ class OrTak:
             while True:
                 self.__resetTable()
                 wakeWord = self.__speechToText()
+                print("wake:", wakeWord)
+                for i in wakeWord:
+                    print(i)
+                print("len", len(wakeWord), len("ready"))
+                print(wakeWord != "ready")
                 if wakeWord != "ready":
                     screen.tryAgain()
                     continue
