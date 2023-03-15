@@ -8,7 +8,7 @@ class LCDdisplay:
     currentTopString = ""
     currentBottomString = ""
 
-    def displayString(self, string1, string2=None):
+    def displayString(self, string1, string2=None, setCurrent=True):
         # mylcd = I2C_LCD_driver.lcd()
         #String splitting
         self.mylcd.lcd_clear()
@@ -20,24 +20,30 @@ class LCDdisplay:
                 bottom_string = string1[stringLen//2:]
                 self.mylcd.lcd_display_string(top_string, 1)
                 self.mylcd.lcd_display_string(bottom_string, 2)
-                self.currentTopString = top_string
-                self.currentBottomString = bottom_string
+                if setCurrent == True:
+                    self.currentTopString = top_string
+                    self.currentBottomString = bottom_string
             else:
                 self.mylcd.lcd_display_string(string1, 1)
-                self.currentTopString = string1
-                self.currentBottomString = ""
+                if setCurrent == True:
+                    self.currentTopString = string1
+                    self.currentBottomString = ""
             sleep(1)
             return
         else:
             #Display printing
             self.mylcd.lcd_display_string(string1, 1)
             self.mylcd.lcd_display_string(string2, 2)
-            self.currentTopString = string1
-            self.currentBottomString = string2
+            if setCurrent == True:
+                self.currentTopString = string1
+                self.currentBottomString = string2
             sleep(1)
 
     def listening(self):
         self.mylcd.lcd_display_string("...", 2, 13)
+
+    def processing(self):
+        self.displayString("Processing", "voice...")
 
     def clear(self):
         self.mylcd.lcd_clear()
@@ -49,7 +55,7 @@ class LCDdisplay:
         self.mylcd.lcd_display_string("     again!", 2)
         sleep(1)
         # print(self.currentTopString, self.currentBottomString)
-        self.displayString(self.currentTopString, self.currentBottomString)
+        # self.displayString(self.currentTopString, self.currentBottomString)
         # self.displayLineOne(self.currentTopString)
         # self.displayLineTwo(self.currentBottomString)
     
