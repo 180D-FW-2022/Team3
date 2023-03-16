@@ -1,6 +1,6 @@
 from time import sleep
 import random
-import orTak
+import orTakNoDisplay
 
 sampleItemOrder=[("chicken sandwich", 4), ("chicken sandwich", 10), ("chicken tenders", 5)]
 
@@ -12,7 +12,7 @@ testNums = [1,2,3,4,5]
 
 # for i in range(1,testNum+1):
 for i in range(testNum):
-    tables.append(orTak.OrTak(random.randint(0,1)))
+    tables.append(orTakNoDisplay.OrTak(random.randint(0,0)))
 
 for i in tables:
     print(sampleItemOrder)
