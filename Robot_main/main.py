@@ -597,7 +597,7 @@ print("STARTING PROGRAM")
 print()
 
 halt_movment()
-job = 0 #nothing
+job = 4  #nothing
 prev_job = 0 #used for returning to previous job from obstacle detection and april tag detection jobs. 
 last_check_timestamp = 0
 closest_distance_front = 200
@@ -608,7 +608,7 @@ newPosReady = False
 obstacleDetectEnabled = False
 calibTime = time.time()
 
-TEST_MODE = 1
+TEST_MODE = 0
 DEMO_MODE = 1
 
 while True:
@@ -935,7 +935,7 @@ while True:
                 print(f"JOB: {job}")
                 
         
-        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 35 and not robot.getInObstacleStateBool() and (job > 4)):
+        if(robot.getMotion() == RobotMotionType.DISTANCE and closest_distance_front < 70 and not robot.getInObstacleStateBool() and (job > 4)):
             if(job != 1000): #if not no job
                 prev_job = job
             job = 1000 #no job
@@ -950,7 +950,7 @@ while True:
             robot.setLeg(0)
                 
             time.sleep(1.5)
-        elif(robot.getInObstacleStateBool() and closest_distance_front > 40): #obstacle cleared. 
+        elif(robot.getInObstacleStateBool() and closest_distance_front > 75): #obstacle cleared. 
             robot.setObstacleClear()
             job = 17
             print(f"JOB: {job}, P-JOB: {prev_job}")
@@ -970,7 +970,7 @@ while True:
             robot.matchPrevWithCurrent()
             robot.setMotionDone()
             moveActionTimestamp = time.time()
-            time.sleep(0.3)
+            time.sleep(0.1)
         elif(b'\x70' == readS):#logging of current position, battery voltage. 
             readS = 0x00
             readBat = serial_motor.read(2)
